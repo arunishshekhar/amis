@@ -46,8 +46,8 @@ describe('runQueueProcessor', () => {
 
     expect(mockReddit.getModQueue).toHaveBeenCalledWith({ subredditName: 'testsubreddit', limit: 100 });
     expect(mockEmbeddingClient.embed).toHaveBeenCalledTimes(1);
-    expect(mockKv.put).toHaveBeenCalledWith('mod_item:p1', expect.any(String));
-    expect(mockKv.put).toHaveBeenCalledWith('embedding:p1', expect.any(String));
     expect(mockKv.put).toHaveBeenCalledWith('mod_item_index', JSON.stringify(['p1']));
+    expect(JSON.parse(store['mod_item:p1'])).toMatchObject({ id: 'p1', author: 'alice' });
+    expect(JSON.parse(store['embedding:p1'])).toEqual([0.1, 0.2]);
   });
 });
