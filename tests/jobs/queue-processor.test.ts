@@ -18,13 +18,24 @@ const mockKv = {
   get: jest.fn(async (k: string) => store[k] ?? undefined),
 };
 
+const rawItem = {
+  ...mockItem,
+  type: 'post',
+  authorName: 'alice',
+  createdAt: new Date(1000),
+  reports: [{ reason: 'spam' }],
+};
+
+const emptyListing = {
+  [Symbol.asyncIterator]: async function* () {},
+};
+
 const mockReddit = {
-  currentSubreddit: jest.fn().mockResolvedValue({ name: 'testsubreddit' }),
   getModQueue: jest.fn().mockReturnValue({
-    [Symbol.asyncIterator]: async function* () {
-      yield { ...mockItem, type: 'post', authorName: 'alice', createdAt: new Date(1000), reports: [{ reason: 'spam' }] };
-    },
+    [Symbol.asyncIterator]: async function* () { yield rawItem; },
   }),
+  getSpam: jest.fn().mockReturnValue(emptyListing),
+  getUnmoderated: jest.fn().mockReturnValue(emptyListing),
 };
 
 const mockEmbeddingClient = {
@@ -39,12 +50,13 @@ describe('runQueueProcessor', () => {
 
   it('fetches queue, normalizes, embeds, and stores', async () => {
     await runQueueProcessor(
-      mockReddit as any,
+      'testsubreddit',
       mockKv as any,
-      mockEmbeddingClient as any
+      mockEmbeddingClient as any,
+      mockReddit as any
     );
 
-    expect(mockReddit.getModQueue).toHaveBeenCalledWith({ subredditName: 'testsubreddit', limit: 100 });
+    expect(mockReddit.getModQueue).toHaveBeenCalledWith({ subreddit: 'testsubreddit', limit: 100 });
     expect(mockEmbeddingClient.embed).toHaveBeenCalledTimes(1);
     expect(mockKv.put).toHaveBeenCalledWith('mod_item_index', JSON.stringify(['p1']));
     expect(JSON.parse(store['mod_item:p1'])).toMatchObject({ id: 'p1', author: 'alice' });

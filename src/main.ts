@@ -19,12 +19,36 @@ Devvit.addSettings([
   },
 ]);
 
+// Schedule the queue processor job on first install
+Devvit.addTrigger({
+  event: 'AppInstall',
+  async onEvent(_event, context) {
+    await context.scheduler.runJob({
+      name: 'queue-processor',
+      cron: '0 */6 * * *', // every 6 hours
+    });
+  },
+});
+
 Devvit.addSchedulerJob({
   name: 'queue-processor',
   onRun: async (_event, context) => {
     const apiKey = await context.settings.get<string>('VOYAGE_API_KEY');
-    const embeddingClient = createEmbeddingClient(apiKey as string);
-    await runQueueProcessor(context.reddit, context.kvStore, embeddingClient);
+    if (!apiKey) {
+      console.error('runQueueProcessor: VOYAGE_API_KEY is not set — skipping run');
+      return;
+    }
+    if (!context.subredditName) {
+      console.error('runQueueProcessor: subredditName unavailable in job context — skipping run');
+      return;
+    }
+    const embeddingClient = createEmbeddingClient(apiKey);
+    await runQueueProcessor(
+      context.subredditName,
+      context.kvStore,
+      embeddingClient,
+      context.reddit
+    );
   },
 });
 
