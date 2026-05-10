@@ -6,7 +6,18 @@ import { runHealthCheck } from './triggers/health-check';
 Devvit.configure({
   kvStore: true,
   redditAPI: true,
+  http: true,
 });
+
+Devvit.addSettings([
+  {
+    name: 'VOYAGE_API_KEY',
+    label: 'Voyage AI API Key',
+    type: 'string',
+    isSecret: true,
+    scope: 'app',
+  },
+]);
 
 Devvit.addSchedulerJob({
   name: 'queue-processor',
