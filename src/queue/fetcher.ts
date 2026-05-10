@@ -14,6 +14,8 @@ export async function fetchModQueue(
       items.push(normalizePost(item as any));
     } else if ((item as any).type === 'comment') {
       items.push(normalizeComment(item as any));
+    } else {
+      console.warn(`fetchModQueue: skipping unknown item type "${(item as any).type}"`);
     }
   }
   return items;
