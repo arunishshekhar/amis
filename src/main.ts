@@ -3,6 +3,7 @@ import { createEmbeddingClient } from './embeddings/client';
 import { runQueueProcessor } from './jobs/queue-processor';
 import { runHealthCheck } from './triggers/health-check';
 import { runPolicyRefresh } from './triggers/policy-refresh';
+import { runRecommendationEngine } from './recommendations/engine';
 
 Devvit.configure({
   kvStore: true,
@@ -37,6 +38,10 @@ Devvit.addTrigger({
     await context.scheduler.runJob({
       name: 'policy-refresh',
       runAt: new Date(),
+    });
+    await context.scheduler.runJob({
+      name: 'recommendation-run',
+      runAt: new Date(Date.now() + 5000),
     });
   },
 });
@@ -94,6 +99,22 @@ Devvit.addSchedulerJob({
   },
 });
 
+Devvit.addSchedulerJob({
+  name: 'recommendation-run',
+  onRun: async (_event, context) => {
+    if (!context.subredditName) {
+      console.error('recommendation-run: subredditName unavailable in job context — skipping run');
+      return;
+    }
+    const summary = await runRecommendationEngine(context.kvStore);
+    console.log(
+      `recommendation-run complete: ${summary.processed} processed, ` +
+      `${summary.removed} remove, ${summary.monitored} monitor, ` +
+      `${summary.approved} approve, ${summary.escalated} escalate`
+    );
+  },
+});
+
 Devvit.addMenuItem({
   label: 'AMIS: Health Check',
   location: 'subreddit',
@@ -133,6 +154,19 @@ Devvit.addMenuItem({
       `${result.automodCount} automod patterns, ` +
       `${result.wikiCount} wiki chunks, ` +
       `${result.removalCount} removal reasons`
+    );
+  },
+});
+
+Devvit.addMenuItem({
+  label: 'AMIS: Analyze Queue',
+  location: 'subreddit',
+  forUserType: 'moderator',
+  onPress: async (_event, context) => {
+    const summary = await runRecommendationEngine(context.kvStore);
+    context.ui.showToast(
+      `Analysis: ${summary.removed} remove, ${summary.monitored} monitor, ` +
+      `${summary.approved} approve, ${summary.escalated} escalate`
     );
   },
 });
