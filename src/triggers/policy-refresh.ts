@@ -25,7 +25,7 @@ export async function runPolicyRefresh(
   wikiPages: string[]
 ): Promise<PolicyRefreshResult> {
   const getRules = async (name: string) => {
-    const rsp = await Devvit.redditAPIPlugins.Subreddits.SubredditAboutRules(
+    const rsp = await (Devvit as any).redditAPIPlugins.Subreddits.SubredditAboutRules(
       { subreddit: name },
       metadata
     );

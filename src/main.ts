@@ -83,7 +83,7 @@ Devvit.addSchedulerJob({
       context.kvStore,
       embeddingClient,
       context.reddit,
-      context.metadata,
+      context.debug.metadata,
       wikiPages
     );
     console.log(
@@ -125,7 +125,7 @@ Devvit.addMenuItem({
       context.kvStore,
       embeddingClient,
       context.reddit,
-      context.metadata,
+      context.debug.metadata,
       wikiPages
     );
     context.ui.showToast(
