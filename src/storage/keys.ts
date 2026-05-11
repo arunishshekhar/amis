@@ -5,4 +5,6 @@ export const KEYS = {
   policy: (id: string) => `policy:${id}`,
   policyIndex: 'policy_index',
   policyEmbedding: (id: string) => `policy_embedding:${id}`,
+  recommendation: (id: string) => `recommendation:${id}`,
+  recommendationIndex: 'recommendation_index',
 };
