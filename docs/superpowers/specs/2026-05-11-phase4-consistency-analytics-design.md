@@ -293,7 +293,7 @@ All tests follow Phase 1–3 TDD pattern: write the test first (red), implement 
 
 ## File Inventory
 
-### New Files (16)
+### New Files (20)
 
 ```
 src/ai/types.ts
