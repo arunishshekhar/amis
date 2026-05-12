@@ -56,17 +56,25 @@ export async function runQueueProcessor(
     //    We process sequentially to avoid hammering the AI APIs simultaneously.
     for (const item of items) {
       try {
-        // Skip re-analysis if the post hasn't changed since we last processed it
         const existingRec = await getRecommendation(kv, item.id);
+
+        // 1. Always skip items a moderator has already actioned.
+        //    Never overwrite actionedAt — that would make the post reappear.
+        if (existingRec?.actionedAt) {
+          console.log(`runQueueProcessor: skipping actioned item ${item.id}`);
+          continue;
+        }
+
+        // 2. Skip unchanged items (post hasn't been edited since last analysis)
         const lastChanged = Math.max(item.editedAt ?? 0, item.timestamp);
-        if (existingRec && existingRec.generatedAt >= lastChanged && !existingRec.actionedAt) {
+        if (existingRec && existingRec.generatedAt >= lastChanged) {
           console.log(`runQueueProcessor: skipping unchanged item ${item.id}`);
           continue;
         }
+
         await analyseItem(kv, provider, item, policies);
       } catch (err) {
         console.error(`runQueueProcessor: failed to analyse item ${item.id}:`, err);
-        // Continue with remaining items
       }
     }
 

@@ -14,26 +14,26 @@ export function generateRecommendation(
   let risk: RiskLevel;
   let rawConfidence: number;
 
-  if (!best || similarity < 0.40) {
+  if (!best || similarity < 0.60) {
     // No meaningful policy match — content appears within guidelines
     action = 'approve';
     risk = 'low';
     rawConfidence = 80;
-  } else if (similarity >= 0.70) {
+  } else if (similarity >= 0.75) {
     // Strong match — high confidence the post violates a rule
     action = 'remove';
     risk = 'high';
-    rawConfidence = 60 + similarity * 40; // 88 at 0.70, 100 at 1.0
-  } else if (similarity >= 0.55) {
+    rawConfidence = 60 + similarity * 40; // 90 at 0.75, 100 at 1.0
+  } else if (similarity >= 0.65) {
     // Moderate match — likely violation, recommend removal
     action = 'remove';
     risk = 'medium';
-    rawConfidence = 40 + similarity * 50; // 67.5 at 0.55, 85 at 0.90
+    rawConfidence = 40 + similarity * 50; // 72.5 at 0.65, 77.5 at 0.75
   } else {
-    // 0.40 <= similarity < 0.55 — borderline, needs human review
+    // 0.60 <= similarity < 0.65 — borderline, needs human review
     action = 'monitor';
     risk = 'medium';
-    rawConfidence = 20 + similarity * 40; // 36 at 0.40, 42 at 0.55
+    rawConfidence = 20 + similarity * 40; // 44 at 0.60, 46 at 0.65
   }
 
   // Escalation override: high report volume + meaningful policy match
