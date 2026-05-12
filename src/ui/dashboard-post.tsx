@@ -1,4 +1,4 @@
-import { Devvit, useState, useAsync } from '@devvit/public-api';
+import { Devvit, useState, useAsync, useForm } from '@devvit/public-api';
 import type { FormKey, JSONObject } from '@devvit/public-api';
 import { KEYS } from '../storage/keys';
 import { getAllRecommendations } from '../storage/recommendation-store';
@@ -34,7 +34,7 @@ export function DashboardPost(context: Devvit.Context): JSX.Element {
   const [aiConfig, setAIConfig] = useState<JSONObject | null>(null);
   const [fullscreenEnabled, setFullscreenEnabled] = useState(false);
 
-  const [aiConfigForm] = useState<FormKey>(() => Devvit.createForm(
+const aiConfigForm = useForm(
     (data: Record<string, unknown>) => {
       const formData = data as Partial<AIConfig>;
       return {
@@ -56,6 +56,7 @@ export function DashboardPost(context: Devvit.Context): JSX.Element {
             label: 'AI Provider API Key',
             helpText: 'Required for every provider.',
             isSecret: true,
+            scope: 'app',
             required: true,
             defaultValue: formData?.apiKey ?? '',
           },
@@ -65,6 +66,7 @@ export function DashboardPost(context: Devvit.Context): JSX.Element {
             label: 'Voyage API Key',
             helpText: 'Required for Claude and custom providers.',
             isSecret: true,
+            scope: 'app',
             defaultValue: formData?.voyageApiKey ?? '',
           },
           {
@@ -90,8 +92,8 @@ export function DashboardPost(context: Devvit.Context): JSX.Element {
           },
         ],
       };
-  },
-  async (event, context) => {
+    },
+    async (event, context) => {
       const values = event.values as {
         provider?: string;
         apiKey?: string;
@@ -115,7 +117,7 @@ export function DashboardPost(context: Devvit.Context): JSX.Element {
       setFullscreenEnabled(!!nextConfig.fullscreenEnabled);
       context.ui.showToast('Saved AMIS AI config');
     }
-  ));
+  );
 
   const rawAsync = useAsync(async () => {
     const [rawRecs, rawInsights, rawDirectActions, rawAiConfig, rawAiProvider] = await Promise.all([

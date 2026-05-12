@@ -64,7 +64,7 @@ export function TriageView({
 
   if (recs.length === 0 || itemIndex >= recs.length) {
     return (
-      <vstack grow>
+      <vstack grow padding={fullscreenEnabled ? 'medium' : undefined} backgroundColor={fullscreenEnabled ? '#040416' : undefined}>
         {header}
         <vstack alignment="center middle" grow gap="medium">
           <text size="large">Queue clear ✓</text>
@@ -98,6 +98,77 @@ export function TriageView({
   const handleApprove = directActionsEnabled
     ? () => onApproveDirect(rec.itemId)
     : onNavigateToQueue;
+
+  if (fullscreenEnabled) {
+    return (
+      <vstack grow padding="medium" backgroundColor="#040416" gap="medium">
+        {header}
+        <hstack gap="medium" grow>
+          <vstack grow gap="small">
+            <vstack backgroundColor="#0f0f2a" cornerRadius="small" padding="medium" gap="small" grow>
+              <hstack gap="small" alignment="start middle">
+                <text weight="bold" color={riskColor(rec.riskLevel)} size="small">
+                  {RISK_LABELS[rec.riskLevel]}
+                </text>
+                <text weight="bold" size="xxlarge" color={confidenceColor(rec.confidenceScore)}>
+                  {String(rec.confidenceScore)}%
+                </text>
+                <text color="#888888" size="xsmall">confidence</text>
+              </hstack>
+
+              <text weight="bold" wrap size="large">{displayTitle}</text>
+              <text size="small" color="#888888">
+                {contentType} · u/{author} · {String(reportCount)} report{reportCount !== 1 ? 's' : ''}
+              </text>
+
+              <vstack backgroundColor="#1a1a2e" cornerRadius="small" padding="small" gap="small">
+                <text size="xsmall" color="#a0a0ff" weight="bold">MATCHED RULE</text>
+                <text size="small">
+                  {rec.matchedPolicyTitle ?? 'No match'} — {rec.similarity.toFixed(2)}
+                </text>
+              </vstack>
+
+              <vstack backgroundColor="#1a1a2e" cornerRadius="small" padding="small" gap="small" grow>
+                <text size="xsmall" color="#a0a0ff" weight="bold">RATIONALE</text>
+                <text size="small" wrap>{rec.rationale}</text>
+              </vstack>
+            </vstack>
+
+            <hstack alignment="center middle" gap="small">
+              <text size="xsmall" color="#888888">
+                Item {String(itemIndex + 1)} of {String(recs.length)} · {String(high)} high · {String(medium)} med · {String(low)} low
+              </text>
+            </hstack>
+          </vstack>
+
+          <vstack width="33%" gap="small">
+            <vstack backgroundColor="#0f0f2a" cornerRadius="small" padding="small" gap="small">
+              <text size="xsmall" color="#a0a0ff" weight="bold">ACTIONS</text>
+              <button size="small" appearance="destructive" onPress={handleRemove}>
+                {directActionsEnabled ? 'Remove' : 'Remove ↗'}
+              </button>
+              <button size="small" appearance="success" onPress={handleApprove}>
+                {directActionsEnabled ? 'Approve' : 'Approve ↗'}
+              </button>
+              <button size="small" appearance="secondary" onPress={onSkip}>Skip →</button>
+              <button size="small" appearance="caution" onPress={() => onEscalate(rec.itemId)}>
+                Escalate
+              </button>
+            </vstack>
+
+            <vstack backgroundColor="#0f0f2a" cornerRadius="small" padding="small" gap="small">
+              <text size="xsmall" color="#a0a0ff" weight="bold">QUEUE SUMMARY</text>
+              <text size="small">{String(recs.length)} total items</text>
+              <text size="small">{String(high)} high risk</text>
+              <text size="small">{String(medium)} medium risk</text>
+              <text size="small">{String(low)} low risk</text>
+              <button size="small" appearance="secondary" onPress={onRefresh}>Refresh ↻</button>
+            </vstack>
+          </vstack>
+        </hstack>
+      </vstack>
+    );
+  }
 
   return (
     <vstack grow>
