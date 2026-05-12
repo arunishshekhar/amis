@@ -55,7 +55,7 @@ export function TriageView({
   const transitionTimer = useInterval(() => {
     setIsTransitioning(false);
     transitionTimer.stop();
-  }, 120);
+  }, 250);
 
   const triggerTransition = (action: () => void | Promise<void>) => {
     setIsTransitioning(true);

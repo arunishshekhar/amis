@@ -254,10 +254,11 @@ const aiConfigForm = useForm(
     }
   };
 
-  // Remove actioned item from local state immediately so it stops showing
+  // Remove actioned item immediately from the displayed list.
+  // Uses direct state form (not functional update) — Devvit useState does not
+  // support the prev => newVal pattern; it silently ignores it.
   const removeActioned = (id: string) => {
-    setLocalActioned((prev) => [...prev, id]);
-    // Keep itemIndex valid: if it would go past end it will show "Queue clear"
+    setLocalActioned([...localActioned, id]);
   };
 
   const advanceItem = () => setItemIndex(itemIndex + 1);
@@ -299,9 +300,10 @@ const aiConfigForm = useForm(
       fullscreenEnabled={fullscreenEnabled}
       subredditName={subredditName ?? ''}
       onRemoveDirect={async (id) => {
-        // Always mark actioned (cross-mod sync) + remove locally
-        removeActioned(id);
-        markActioned(kvStore, id, 'remove', context.userId ?? 'moderator').catch(console.error);
+        removeActioned(id);                         // immediate local hide
+        try {
+          await markActioned(kvStore, id, 'remove', context.userId ?? 'moderator');
+        } catch (e) { console.error('markActioned failed', e); }
         if (directActionsEnabled) {
           reddit.remove(id, false).catch(console.error);
         }
@@ -309,11 +311,13 @@ const aiConfigForm = useForm(
       }}
       onApproveDirect={async (id) => {
         removeActioned(id);
-        markActioned(kvStore, id, 'approve', context.userId ?? 'moderator').catch(console.error);
+        try {
+          await markActioned(kvStore, id, 'approve', context.userId ?? 'moderator');
+        } catch (e) { console.error('markActioned failed', e); }
         if (directActionsEnabled) {
           reddit.approve(id).catch(console.error);
         }
-        ui.showToast(directActionsEnabled ? 'Approved ✓' : 'Approved ✓');
+        ui.showToast('Approved ✓');
       }}
       onNavigateToQueue={() => {
         ui.navigateTo(`https://www.reddit.com/r/${subredditName ?? ''}/about/modqueue`);
@@ -321,10 +325,12 @@ const aiConfigForm = useForm(
       onSkip={advanceItem}
       onEscalate={async (id) => {
         removeActioned(id);
-        Promise.all([
-          kvStore.put(KEYS.escalation(id), 'true'),
-          markActioned(kvStore, id, 'escalate', context.userId ?? 'moderator'),
-        ]).catch(console.error);
+        try {
+          await Promise.all([
+            kvStore.put(KEYS.escalation(id), 'true'),
+            markActioned(kvStore, id, 'escalate', context.userId ?? 'moderator'),
+          ]);
+        } catch (e) { console.error('markActioned failed', e); }
         ui.showToast('Escalated ✓');
       }}
       onViewInsights={() => setView('insights')}

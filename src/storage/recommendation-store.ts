@@ -22,15 +22,24 @@ export async function markActioned(
   moderator: string
 ): Promise<void> {
   const raw = await kv.get(KEYS.recommendation(itemId));
-  if (!raw) return;
-  const rec: Recommendation = JSON.parse(raw as string);
-  const updated: Recommendation = {
-    ...rec,
+  const base: Partial<Recommendation> = raw
+    ? JSON.parse(raw as string)
+    : { itemId, suggestedAction: action, riskLevel: 'low', confidenceScore: 0, similarity: 0, rationale: '', generatedAt: 0, matchedPolicyId: null, matchedPolicyTitle: null };
+  const updated = {
+    ...base,
+    itemId,
     actionedAt: Date.now(),
     actionedBy: moderator,
     actionTaken: action,
   };
   await kv.put(KEYS.recommendation(itemId), JSON.stringify(updated));
+  // Also ensure it's in the index so getAllRecommendations will see it and filter it
+  const rawIndex = await kv.get(KEYS.recommendationIndex);
+  const ids: string[] = rawIndex ? JSON.parse(rawIndex as string) : [];
+  if (!ids.includes(itemId)) {
+    ids.push(itemId);
+    await kv.put(KEYS.recommendationIndex, JSON.stringify(ids));
+  }
 }
 
 
