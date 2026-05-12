@@ -10,10 +10,14 @@ export class VoyageEmbeddingClient implements EmbeddingClient {
 
   async embed(texts: string[]): Promise<number[][]> {
     const result = await this.client.embed({ model: 'voyage-3', input: texts });
-    return result.data!.map((d) => d.embedding!);
+    if (!result.data) throw new Error('VoyageAI embed: response missing data field');
+    return result.data.map((d) => {
+      if (!d.embedding) throw new Error('VoyageAI embed: embedding missing in result item');
+      return d.embedding;
+    });
   }
 }
 
-export function createEmbeddingClient(apiKey: string): VoyageEmbeddingClient {
+export function createEmbeddingClient(apiKey: string): EmbeddingClient {
   return new VoyageEmbeddingClient(apiKey);
 }
