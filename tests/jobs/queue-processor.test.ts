@@ -39,7 +39,7 @@ const mockReddit = {
 };
 
 const mockEmbeddingClient = {
-  embed: jest.fn().mockResolvedValue({ data: [{ embedding: [0.1, 0.2] }] }),
+  embed: jest.fn().mockResolvedValue([[0.1, 0.2]]),
 };
 
 describe('runQueueProcessor', () => {

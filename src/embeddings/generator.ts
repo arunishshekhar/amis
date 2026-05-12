@@ -1,7 +1,6 @@
 import type { KVStore } from '@devvit/public-api';
-import type { VoyageAIClient } from 'voyageai';
+import type { EmbeddingClient } from '../ai/types';
 import type { ModItem } from '../types/mod-item';
-import { embedText } from './client';
 import { saveEmbedding } from '../storage/embedding-store';
 
 function itemToEmbedInput(item: ModItem): string {
@@ -11,13 +10,13 @@ function itemToEmbedInput(item: ModItem): string {
 
 export async function generateAndStoreEmbeddings(
   kv: KVStore,
-  client: VoyageAIClient,
+  client: EmbeddingClient,
   items: ModItem[]
 ): Promise<void> {
   await Promise.all(
     items.map(async (item) => {
       const text = itemToEmbedInput(item);
-      const vector = await embedText(client, text);
+      const [vector] = await client.embed([text]);
       await saveEmbedding(kv, item.id, vector);
     })
   );

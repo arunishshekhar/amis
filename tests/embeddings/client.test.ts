@@ -1,18 +1,25 @@
-import { createEmbeddingClient, embedText } from '../../src/embeddings/client';
+import { VoyageEmbeddingClient, createEmbeddingClient } from '../../src/embeddings/client';
 
-describe('embedText', () => {
-  it('calls Voyage AI and returns a float array', async () => {
-    const mockEmbed = jest.fn().mockResolvedValue({
+describe('VoyageEmbeddingClient', () => {
+  it('embed calls Voyage AI and returns number[][]', async () => {
+    const mockVoyageEmbed = jest.fn().mockResolvedValue({
       data: [{ embedding: [0.1, 0.2, 0.3] }],
     });
-    const client = { embed: mockEmbed } as any;
+    const client = new VoyageEmbeddingClient('test-key');
+    // Inject mock into the private client
+    (client as any).client = { embed: mockVoyageEmbed };
 
-    const result = await embedText(client, 'hello world');
+    const result = await client.embed(['hello world']);
 
-    expect(mockEmbed).toHaveBeenCalledWith({
+    expect(mockVoyageEmbed).toHaveBeenCalledWith({
       model: 'voyage-3',
       input: ['hello world'],
     });
-    expect(result).toEqual([0.1, 0.2, 0.3]);
+    expect(result).toEqual([[0.1, 0.2, 0.3]]);
+  });
+
+  it('createEmbeddingClient returns a VoyageEmbeddingClient', () => {
+    const client = createEmbeddingClient('test-key');
+    expect(client).toBeInstanceOf(VoyageEmbeddingClient);
   });
 });

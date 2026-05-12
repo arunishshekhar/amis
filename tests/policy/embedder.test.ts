@@ -19,27 +19,21 @@ describe('embedAndStorePolicies', () => {
   it('embeds each policy with title: text format', async () => {
     const kv = makeKv();
     const mockEmbed = jest.fn()
-      .mockResolvedValueOnce({ data: [{ embedding: [0.1, 0.2] }] })
-      .mockResolvedValueOnce({ data: [{ embedding: [0.3, 0.4] }] });
+      .mockResolvedValueOnce([[0.1, 0.2]])
+      .mockResolvedValueOnce([[0.3, 0.4]]);
     const client = { embed: mockEmbed } as any;
 
     await embedAndStorePolicies(kv as any, client, policies);
 
-    expect(mockEmbed).toHaveBeenCalledWith({
-      model: 'voyage-3',
-      input: ['No spam: No spam allowed'],
-    });
-    expect(mockEmbed).toHaveBeenCalledWith({
-      model: 'voyage-3',
-      input: ['Be civil: Be nice'],
-    });
+    expect(mockEmbed).toHaveBeenCalledWith(['No spam: No spam allowed']);
+    expect(mockEmbed).toHaveBeenCalledWith(['Be civil: Be nice']);
   });
 
   it('stores each embedding vector under the correct key', async () => {
     const kv = makeKv();
     const mockEmbed = jest.fn()
-      .mockResolvedValueOnce({ data: [{ embedding: [0.1, 0.2] }] })
-      .mockResolvedValueOnce({ data: [{ embedding: [0.3, 0.4] }] });
+      .mockResolvedValueOnce([[0.1, 0.2]])
+      .mockResolvedValueOnce([[0.3, 0.4]]);
     const client = { embed: mockEmbed } as any;
 
     await embedAndStorePolicies(kv as any, client, policies);
@@ -57,8 +51,8 @@ describe('embedAndStorePolicies', () => {
   it('writes the policy index with all embedded ids', async () => {
     const kv = makeKv();
     const mockEmbed = jest.fn()
-      .mockResolvedValueOnce({ data: [{ embedding: [0.1, 0.2] }] })
-      .mockResolvedValueOnce({ data: [{ embedding: [0.3, 0.4] }] });
+      .mockResolvedValueOnce([[0.1, 0.2]])
+      .mockResolvedValueOnce([[0.3, 0.4]]);
     const client = { embed: mockEmbed } as any;
 
     await embedAndStorePolicies(kv as any, client, policies);

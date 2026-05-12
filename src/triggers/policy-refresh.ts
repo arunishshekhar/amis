@@ -1,7 +1,7 @@
 import type { KVStore, RedditAPIClient } from '@devvit/public-api';
 import { Devvit } from '@devvit/public-api';
 import type { Metadata } from '@devvit/protos';
-import type { VoyageAIClient } from 'voyageai';
+import type { EmbeddingClient } from '../ai/types';
 import { ingestRules } from '../policy/rule-ingestor';
 import { parseAutomodConfig } from '../policy/automod-parser';
 import { ingestWikiPages } from '../policy/wiki-ingestor';
@@ -19,7 +19,7 @@ export interface PolicyRefreshResult {
 export async function runPolicyRefresh(
   subredditName: string,
   kv: KVStore,
-  embeddingClient: VoyageAIClient,
+  embeddingClient: EmbeddingClient,
   reddit: RedditAPIClient,
   metadata: Metadata,
   wikiPages: string[]

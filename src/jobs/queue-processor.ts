@@ -1,5 +1,5 @@
 import type { KVStore } from '@devvit/public-api';
-import type { VoyageAIClient } from 'voyageai';
+import type { EmbeddingClient } from '../ai/types';
 import { fetchModQueue } from '../queue/fetcher';
 import { saveModItems } from '../storage/mod-item-store';
 import { generateAndStoreEmbeddings } from '../embeddings/generator';
@@ -7,7 +7,7 @@ import { generateAndStoreEmbeddings } from '../embeddings/generator';
 export async function runQueueProcessor(
   subredditName: string,
   kv: KVStore,
-  embeddingClient: VoyageAIClient,
+  embeddingClient: EmbeddingClient,
   reddit: any
 ): Promise<void> {
   try {
