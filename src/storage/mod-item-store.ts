@@ -11,6 +11,16 @@ export async function saveModItems(kv: KVStore, items: ModItem[]): Promise<void>
   await kv.put(KEYS.modItemIndex, JSON.stringify(merged));
 }
 
+export async function saveModItem(kv: KVStore, item: ModItem): Promise<void> {
+  await kv.put(KEYS.modItem(item.id), JSON.stringify(item));
+  const existingRaw = await kv.get(KEYS.modItemIndex);
+  const existing: string[] = existingRaw ? JSON.parse(existingRaw as string) : [];
+  if (!existing.includes(item.id)) {
+    existing.push(item.id);
+    await kv.put(KEYS.modItemIndex, JSON.stringify(existing));
+  }
+}
+
 export async function getAllModItemIds(kv: KVStore): Promise<string[]> {
   const raw = await kv.get(KEYS.modItemIndex);
   return raw ? JSON.parse(raw as string) : [];

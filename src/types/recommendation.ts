@@ -11,4 +11,8 @@ export interface Recommendation {
   similarity: number;             // raw cosine score of best policy match
   rationale: string;              // deterministic template string
   generatedAt: number;            // Unix ms
+  /** Set when AMIS auto-acted on this item via PostSubmit trigger */
+  autoActed?: boolean;
+  /** The action that was automatically taken */
+  autoActedAction?: SuggestedAction;
 }

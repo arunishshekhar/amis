@@ -91,6 +91,16 @@ export function TriageView({
   const medium = recs.filter((r) => r.riskLevel === 'medium').length;
   const low = recs.filter((r) => r.riskLevel === 'low').length;
 
+  // Auto-act badge
+  const autoActBadge = rec.autoActed ? (
+    <hstack backgroundColor={rec.autoActedAction === 'remove' ? '#7f1d1dFF' : '#14532dFF'}
+      cornerRadius="small" padding="xsmall" gap="small">
+      <text size="xsmall" weight="bold" color={rec.autoActedAction === 'remove' ? '#fca5a5' : '#86efac'}>
+        {rec.autoActedAction === 'remove' ? '⛔ AUTO-REMOVED' : '✅ AUTO-APPROVED'}
+      </text>
+    </hstack>
+  ) : null;
+
   const handleRemove = directActionsEnabled
     ? () => onRemoveDirect(rec.itemId)
     : onNavigateToQueue;
@@ -115,6 +125,7 @@ export function TriageView({
                 </text>
                 <text color="#888888" size="xsmall">confidence</text>
               </hstack>
+              {autoActBadge}
 
               <text weight="bold" wrap size="large">{displayTitle}</text>
               <text size="small" color="#888888">
@@ -183,6 +194,7 @@ export function TriageView({
           </text>
           <text color="#888888" size="xsmall">confidence</text>
         </hstack>
+        {autoActBadge}
 
         <text weight="bold" wrap size="medium">{displayTitle}</text>
         <text size="xsmall" color="#888888">

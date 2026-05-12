@@ -6,6 +6,7 @@ import { runPolicyRefresh } from './triggers/policy-refresh';
 import { runRecommendationEngine } from './recommendations/engine';
 import { DashboardPost } from './ui/dashboard-post';
 import { makeDashboardPreview } from './ui/dashboard-preview';
+import { analyseAndActOnPost } from './triggers/post-submit';
 import { KEYS } from './storage/keys';
 
 Devvit.configure({
@@ -63,7 +64,57 @@ Devvit.addSettings([
     isSecret: false,
     scope: 'app',
   },
+  {
+    name: 'AUTO_ACT_ENABLED',
+    label: 'Enable automatic moderation actions (remove/approve) on new posts',
+    type: 'boolean',
+    defaultValue: false,
+    scope: 'app',
+  },
+  {
+    name: 'AUTO_REMOVE_THRESHOLD',
+    label: 'Auto-remove confidence threshold (0–100, default 90) — posts with AI confidence ≥ this value are auto-removed',
+    type: 'number',
+    defaultValue: 90,
+    scope: 'app',
+  },
 ]);
+
+Devvit.addTrigger({
+  event: 'PostSubmit',
+  async onEvent(event, context) {
+    const post = (event as any).post;
+    if (!post) {
+      console.warn('PostSubmit: event.post is undefined — skipping');
+      return;
+    }
+    if (!context.subredditName) {
+      console.warn('PostSubmit: subredditName unavailable — skipping');
+      return;
+    }
+
+    let provider;
+    try {
+      provider = await createAIProvider(context.settings, context.kvStore);
+    } catch (err) {
+      console.warn('PostSubmit: AI provider not configured yet — saving post without analysis:', err);
+      return;
+    }
+
+    const autoActEnabled = (await context.settings.get<boolean>('AUTO_ACT_ENABLED')) ?? false;
+    const rawThreshold = await context.settings.get<number>('AUTO_REMOVE_THRESHOLD');
+    const autoRemoveThreshold = typeof rawThreshold === 'number' ? rawThreshold : 90;
+
+    await analyseAndActOnPost(
+      post,
+      context.kvStore,
+      provider.embedding,
+      context.reddit,
+      !!autoActEnabled,
+      autoRemoveThreshold
+    );
+  },
+});
 
 Devvit.addTrigger({
   event: 'AppInstall',
