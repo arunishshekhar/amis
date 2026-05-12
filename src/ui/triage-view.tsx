@@ -64,7 +64,7 @@ export function TriageView({
 
   if (recs.length === 0 || itemIndex >= recs.length) {
     return (
-      <vstack grow padding={fullscreenEnabled ? 'medium' : undefined} backgroundColor={fullscreenEnabled ? '#040416' : undefined}>
+      <vstack grow padding={fullscreenEnabled ? 'medium' : undefined} backgroundColor={fullscreenEnabled ? '#040416FF' : undefined}>
         {header}
         <vstack alignment="center middle" grow gap="medium">
           <text size="large">Queue clear ✓</text>
@@ -101,11 +101,11 @@ export function TriageView({
 
   if (fullscreenEnabled) {
     return (
-      <vstack grow padding="medium" backgroundColor="#040416" gap="medium">
+      <vstack grow padding="medium" backgroundColor="#040416FF" gap="medium">
         {header}
         <hstack gap="medium" grow>
           <vstack grow gap="small">
-            <vstack backgroundColor="#0f0f2a" cornerRadius="small" padding="medium" gap="small" grow>
+            <vstack backgroundColor="#0f0f2aFF" cornerRadius="small" padding="medium" gap="small" grow>
               <hstack gap="small" alignment="start middle">
                 <text weight="bold" color={riskColor(rec.riskLevel)} size="small">
                   {RISK_LABELS[rec.riskLevel]}
@@ -121,14 +121,14 @@ export function TriageView({
                 {contentType} · u/{author} · {String(reportCount)} report{reportCount !== 1 ? 's' : ''}
               </text>
 
-              <vstack backgroundColor="#1a1a2e" cornerRadius="small" padding="small" gap="small">
+              <vstack backgroundColor="#1a1a2eFF" cornerRadius="small" padding="small" gap="small">
                 <text size="xsmall" color="#a0a0ff" weight="bold">MATCHED RULE</text>
                 <text size="small">
                   {rec.matchedPolicyTitle ?? 'No match'} — {rec.similarity.toFixed(2)}
                 </text>
               </vstack>
 
-              <vstack backgroundColor="#1a1a2e" cornerRadius="small" padding="small" gap="small" grow>
+              <vstack backgroundColor="#1a1a2eFF" cornerRadius="small" padding="small" gap="small" grow>
                 <text size="xsmall" color="#a0a0ff" weight="bold">RATIONALE</text>
                 <text size="small" wrap>{rec.rationale}</text>
               </vstack>
@@ -142,7 +142,7 @@ export function TriageView({
           </vstack>
 
           <vstack width="33%" gap="small">
-            <vstack backgroundColor="#0f0f2a" cornerRadius="small" padding="small" gap="small">
+            <vstack backgroundColor="#0f0f2aFF" cornerRadius="small" padding="small" gap="small">
               <text size="xsmall" color="#a0a0ff" weight="bold">ACTIONS</text>
               <button size="small" appearance="destructive" onPress={handleRemove}>
                 {directActionsEnabled ? 'Remove' : 'Remove ↗'}
@@ -156,7 +156,7 @@ export function TriageView({
               </button>
             </vstack>
 
-            <vstack backgroundColor="#0f0f2a" cornerRadius="small" padding="small" gap="small">
+            <vstack backgroundColor="#0f0f2aFF" cornerRadius="small" padding="small" gap="small">
               <text size="xsmall" color="#a0a0ff" weight="bold">QUEUE SUMMARY</text>
               <text size="small">{String(recs.length)} total items</text>
               <text size="small">{String(high)} high risk</text>
@@ -189,14 +189,14 @@ export function TriageView({
           {contentType} · u/{author} · {String(reportCount)} report{reportCount !== 1 ? 's' : ''}
         </text>
 
-        <vstack backgroundColor="#1a1a2e" cornerRadius="small" padding="small" gap="small">
+        <vstack backgroundColor="#1a1a2eFF" cornerRadius="small" padding="small" gap="small">
           <text size="xsmall" color="#a0a0ff" weight="bold">MATCHED RULE</text>
           <text size="small">
             {rec.matchedPolicyTitle ?? 'No match'} — {rec.similarity.toFixed(2)}
           </text>
         </vstack>
 
-        <vstack backgroundColor="#1a1a2e" cornerRadius="small" padding="small" gap="small">
+        <vstack backgroundColor="#1a1a2eFF" cornerRadius="small" padding="small" gap="small">
           <text size="xsmall" color="#a0a0ff" weight="bold">RATIONALE</text>
           <text size="small" wrap>{rec.rationale}</text>
         </vstack>

@@ -7,13 +7,14 @@ class GeminiEmbeddingClient implements EmbeddingClient {
     return Promise.all(
       texts.map(async (text) => {
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1/models/text-embedding-004:embedContent?key=${this.apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${this.apiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              model: 'models/text-embedding-004',
               content: { parts: [{ text }] },
+              // Pin to 768 dims for compatibility with existing stored vectors
+              outputDimensionality: 768,
             }),
           }
         );

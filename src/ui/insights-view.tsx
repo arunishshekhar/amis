@@ -48,7 +48,7 @@ export function InsightsView({ insights, onBack, onAcknowledge }: InsightsViewPr
             gap="small"
             border="thin"
             cornerRadius="small"
-            backgroundColor="#1a1a2e"
+            backgroundColor="#1a1a2eFF"
           >
             <hstack gap="small" alignment="start middle">
               <text

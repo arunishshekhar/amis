@@ -32,7 +32,7 @@ export function SettingsView({
         <text weight="bold" size="medium">Settings</text>
       </hstack>
 
-      <vstack gap="small" padding="small" backgroundColor="#1a1a2e" cornerRadius="small">
+      <vstack gap="small" padding="small" backgroundColor="#1a1a2eFF" cornerRadius="small">
         <text size="xsmall" color="#a0a0ff" weight="bold">AI CONFIGURATION</text>
         <text size="small">{aiProvider}</text>
         <text size="xsmall" color="#888888" wrap>
@@ -43,7 +43,7 @@ export function SettingsView({
         </button>
       </vstack>
 
-      <vstack gap="small" padding="small" backgroundColor="#1a1a2e" cornerRadius="small">
+      <vstack gap="small" padding="small" backgroundColor="#1a1a2eFF" cornerRadius="small">
         <text size="xsmall" color="#a0a0ff" weight="bold">FULL SCREEN</text>
         <text size="xsmall" color="#888888" wrap>
           Enable the dashboard full screen layout for a more expansive review experience.
@@ -60,7 +60,7 @@ export function SettingsView({
         </hstack>
       </vstack>
 
-      <vstack gap="small" padding="small" backgroundColor="#1a1a2e" cornerRadius="small">
+      <vstack gap="small" padding="small" backgroundColor="#1a1a2eFF" cornerRadius="small">
         <text size="xsmall" color="#a0a0ff" weight="bold">DIRECT ACTIONS</text>
         <text size="xsmall" color="#888888" wrap>
           Execute remove/approve from dashboard without leaving Reddit
@@ -77,7 +77,7 @@ export function SettingsView({
         </hstack>
       </vstack>
 
-      <vstack gap="small" padding="small" backgroundColor="#1a1a2e" cornerRadius="small">
+      <vstack gap="small" padding="small" backgroundColor="#1a1a2eFF" cornerRadius="small">
         <text size="xsmall" color="#a0a0ff" weight="bold">QUEUE STATUS</text>
         <text size="small">{itemCount} items in queue</text>
         <button size="small" appearance="secondary" onPress={onRefreshQueue}>
