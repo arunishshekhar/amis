@@ -247,7 +247,8 @@ const aiConfigForm = useForm(
     try {
       ui.showToast('Refreshing queue...');
       const provider = await createAIProvider(settings, kvStore);
-      await runQueueProcessor(subredditName!, kvStore, provider, reddit);
+      // forceReprocess=true: re-evaluates posts previously auto-approved (e.g. when LLM was down)
+      await runQueueProcessor(subredditName!, kvStore, provider, reddit, true);
       ui.showToast('Queue refreshed');
     } catch {
       ui.showToast('Refresh failed — try again');

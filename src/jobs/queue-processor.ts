@@ -22,7 +22,10 @@ export async function runQueueProcessor(
   subredditName: string,
   kv: KVStore,
   provider: AIProvider,
-  reddit: any
+  reddit: any,
+  /** When true (manual Refresh), re-analyse posts previously cached as 'approve'
+   *  so threshold/rule changes take effect. Scheduled runs leave this false. */
+  forceReprocess = false
 ): Promise<void> {
   try {
     // 1. Fetch the current mod queue
@@ -48,33 +51,70 @@ export async function runQueueProcessor(
     if (policies.length === 0) {
       console.warn('runQueueProcessor: no policies found — run "AMIS: Refresh Policy" first');
       // Still save embeddings so duplicate detection works later
-      await Promise.all(items.map((item) => embedAndSave(kv, provider, item)));
+      for (const item of items) {
+        await embedAndSave(kv, provider, item);
+      }
       return;
     }
 
-    // 4. Analyse each item: embed → cosine search → LLM classify → recommendation
-    //    We process sequentially to avoid hammering the AI APIs simultaneously.
-    for (const item of items) {
+    // 4. Determine which items actually need (re-)analysis.
+    //    Actioned items are ALWAYS skipped — no exception, no overrides.
+    //    Unchanged items are skipped unless forceReprocess is on AND the cached
+    //    result was 'approve' (to re-evaluate with a new LLM key).
+    const toProcess: ModItem[] = [];
+    const existingRecs = await Promise.all(items.map((i) => getRecommendation(kv, i.id)));
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const existingRec = existingRecs[i];
+
+      // Rule 1: actioned = permanently done. Never touch again.
+      if (existingRec?.actionedAt) {
+        console.log(`runQueueProcessor: skipping actioned item ${item.id}`);
+        continue;
+      }
+
+      // Rule 2: unchanged items are skipped unless manually refreshed with a new LLM key
+      const lastChanged = Math.max(item.editedAt ?? 0, item.timestamp);
+      const isFreshEnough = existingRec && existingRec.generatedAt >= lastChanged;
+      const wasCachedApprove = existingRec?.suggestedAction === 'approve';
+      if (isFreshEnough && !(forceReprocess && wasCachedApprove)) {
+        console.log(`runQueueProcessor: skipping unchanged item ${item.id}`);
+        continue;
+      }
+
+      toProcess.push(item);
+    }
+
+    if (toProcess.length === 0) {
+      console.log('runQueueProcessor: nothing new to analyse');
+    } else {
+      console.log(`runQueueProcessor: analysing ${toProcess.length} item(s) in batch`);
+
+      // 5. Batch-embed all items that need processing — one API call for all.
+      const texts = toProcess.map(
+        (item) => [item.title, item.body, ...item.reportReasons].filter(Boolean).join(' | ')
+      );
+      let vectors: number[][];
       try {
-        const existingRec = await getRecommendation(kv, item.id);
+        vectors = await provider.embedding.embed(texts);
+      } catch (embedErr) {
+        console.error('runQueueProcessor: batch embed failed:', embedErr);
+        vectors = toProcess.map(() => []); // empty vectors fall through to approve
+      }
 
-        // 1. Always skip items a moderator has already actioned.
-        //    Never overwrite actionedAt — that would make the post reappear.
-        if (existingRec?.actionedAt) {
-          console.log(`runQueueProcessor: skipping actioned item ${item.id}`);
-          continue;
+      // 6. For each item: cosine policy search → skip LLM if below threshold → LLM classify.
+      for (let i = 0; i < toProcess.length; i++) {
+        const item = toProcess[i];
+        const vector = vectors[i];
+        try {
+          await saveEmbedding(kv, item.id, vector);
+          await analyseItemWithVector(kv, provider, item, policies, vector);
+          // Small inter-item pause to stay within Devvit's outbound HTTP rate limit
+          if (i < toProcess.length - 1) await new Promise((r) => setTimeout(r, 500));
+        } catch (err) {
+          console.error(`runQueueProcessor: failed to analyse item ${item.id}:`, err);
         }
-
-        // 2. Skip unchanged items (post hasn't been edited since last analysis)
-        const lastChanged = Math.max(item.editedAt ?? 0, item.timestamp);
-        if (existingRec && existingRec.generatedAt >= lastChanged) {
-          console.log(`runQueueProcessor: skipping unchanged item ${item.id}`);
-          continue;
-        }
-
-        await analyseItem(kv, provider, item, policies);
-      } catch (err) {
-        console.error(`runQueueProcessor: failed to analyse item ${item.id}:`, err);
       }
     }
 
@@ -92,23 +132,27 @@ async function embedAndSave(kv: KVStore, provider: AIProvider, item: ModItem): P
   await saveEmbedding(kv, item.id, vector);
 }
 
-/** Full analysis pipeline for a single mod-queue item. */
-async function analyseItem(
+/**
+ * Full analysis pipeline for a single mod-queue item using a pre-computed embedding vector.
+ * The vector is computed upstream in a batch call to avoid N individual embed requests.
+ * LLM is only called when embedding similarity is >= 0.60 — below that the post is
+ * auto-approved without hitting the LLM at all.
+ */
+async function analyseItemWithVector(
   kv: KVStore,
   provider: AIProvider,
   item: ModItem,
-  policies: Awaited<ReturnType<typeof getAllPolicies>>
+  policies: Awaited<ReturnType<typeof getAllPolicies>>,
+  vector: number[]
 ): Promise<void> {
-  // Embed
-  const text = [item.title, item.body, ...item.reportReasons].filter(Boolean).join(' | ');
-  const [vector] = await provider.embedding.embed([text]);
-  await saveEmbedding(kv, item.id, vector);
-
   // Embedding-based policy search → base recommendation
-  const matches = await searchPolicies(kv, vector, 3);
+  const matches = vector.length > 0 ? await searchPolicies(kv, vector, 3) : [];
   let rec = generateRecommendation(item, matches);
 
-  // LLM classification — reliable judge for structural/syntactic rules
+  // Always run LLM — it is the authoritative classifier.
+  // Embedding finds the closest matching rule but cannot detect factual falsehoods
+  // or structural rules (e.g. "no posts starting with A", "no misinformation")
+  // where vocabulary overlap with the post text is near zero.
   try {
     const llmVerdict = await classifyWithLLM(item, policies, provider.textGen);
     if (llmVerdict) {
@@ -119,7 +163,6 @@ async function analyseItem(
       );
 
       if (llmVerdict.violates && llmVerdict.confidence >= 70) {
-        // LLM confirmed a violation — use its verdict
         rec = {
           ...rec,
           suggestedAction: llmVerdict.confidence >= 90 ? 'remove' : 'monitor',
@@ -130,7 +173,6 @@ async function analyseItem(
           rationale: `[LLM] ${llmVerdict.rationale}`,
         };
       } else if (!llmVerdict.violates) {
-        // LLM says no violation — trust it and approve regardless of embedding score
         rec = {
           ...rec,
           suggestedAction: 'approve',
@@ -141,9 +183,7 @@ async function analyseItem(
       }
     }
   } catch (llmErr) {
-    // LLM failed — apply a stricter threshold on the embedding-only result
-    // to avoid false positives. Require similarity >= 0.75 to suggest remove;
-    // anything lower is demoted to monitor so humans make the final call.
+    // LLM unavailable — fall back to embedding-only result with stricter threshold
     if (rec.suggestedAction === 'remove' && rec.similarity < 0.75) {
       rec = {
         ...rec,
@@ -153,7 +193,7 @@ async function analyseItem(
         rationale: rec.rationale + ' (LLM unavailable — human review required)',
       };
     }
-    console.warn(`runQueueProcessor: LLM failed for ${item.id}, using embedding result:`, llmErr);
+    console.warn(`runQueueProcessor: LLM failed for ${item.id}:`, llmErr);
   }
 
   await saveRecommendation(kv, rec);

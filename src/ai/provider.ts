@@ -12,7 +12,11 @@ interface Settings {
 
 export async function createAIProvider(settings: Settings, kvStore?: KVStore): Promise<AIProvider> {
   const aiConfig = kvStore ? await getAIConfig(kvStore) : null;
-  const providerName = aiConfig?.provider ?? ((await settings.get('AI_PROVIDER')) as string | undefined) ?? 'claude';
+  const rawProvider = aiConfig?.provider ?? await settings.get('AI_PROVIDER');
+  // Devvit 'select' fields return string[] — extract the first element
+  const providerName = Array.isArray(rawProvider)
+    ? (rawProvider[0] as string ?? 'openai')
+    : (rawProvider as string | undefined) ?? 'openai';
   const aiKey = aiConfig?.apiKey ?? (await settings.get('AI_API_KEY')) as string | undefined;
   if (!aiKey) throw new Error('createAIProvider: AI_API_KEY is not set');
 
