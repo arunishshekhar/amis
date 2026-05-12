@@ -93,16 +93,14 @@ const aiConfigForm = useForm(
         ],
       };
     },
-    async (event, context) => {
-      const values = event.values as {
-        provider?: string;
-        apiKey?: string;
-        voyageApiKey?: string;
-        customApiBaseUrl?: string;
-        customModel?: string;
-        fullscreenEnabled?: boolean;
-      };
-
+    async (values: {
+      provider?: string;
+      apiKey?: string;
+      voyageApiKey?: string;
+      customApiBaseUrl?: string;
+      customModel?: string;
+      fullscreenEnabled?: boolean;
+    }) => {
       const nextConfig: AIConfig = {
         provider: values.provider?.trim() ?? 'claude',
         apiKey: values.apiKey?.trim() ?? '',
@@ -112,10 +110,10 @@ const aiConfigForm = useForm(
         fullscreenEnabled: values.fullscreenEnabled ?? false,
       };
 
-      await saveAIConfig(context.kvStore, nextConfig);
+      await saveAIConfig(kvStore, nextConfig);
       setAIConfig(nextConfig as JSONObject);
       setFullscreenEnabled(!!nextConfig.fullscreenEnabled);
-      context.ui.showToast('Saved AMIS AI config');
+      ui.showToast('Saved AMIS AI config');
     }
   );
 
