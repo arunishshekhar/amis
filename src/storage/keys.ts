@@ -11,4 +11,7 @@ export const KEYS = {
   modDecisionIndex: 'moddecision_index',
   insight: (id: string) => `insight:${id}`,
   insightIndex: 'insight_index',
+  dashboardPostId: 'dashboard_post_id',
+  directActionsEnabled: 'direct_actions_enabled',
+  escalation: (id: string) => `escalation:${id}`,
 };

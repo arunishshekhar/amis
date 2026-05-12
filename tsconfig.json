@@ -5,7 +5,10 @@
     "moduleResolution": "bundler",
     "strict": true,
     "esModuleInterop": true,
-    "outDir": "dist"
+    "outDir": "dist",
+    "jsx": "react",
+    "jsxFactory": "Devvit.createElement",
+    "jsxFragmentFactory": "Devvit.Fragment"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
