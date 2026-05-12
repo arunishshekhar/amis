@@ -126,7 +126,9 @@ const aiConfigForm = useForm(
       settings.get<string>('AI_PROVIDER'),
     ]);
 
-    const sortedRecs = sortItemsByRisk(rawRecs);
+    // Only surface items that need moderator attention — filter out auto-approved
+    const actionable = rawRecs.filter((r) => r.suggestedAction !== 'approve');
+    const sortedRecs = sortItemsByRisk(actionable);
 
     const modItems: Record<string, ModItem> = {};
     await Promise.all(
@@ -237,7 +239,7 @@ const aiConfigForm = useForm(
     try {
       ui.showToast('Refreshing queue...');
       const provider = await createAIProvider(settings, kvStore);
-      await runQueueProcessor(subredditName!, kvStore, provider.embedding, reddit);
+      await runQueueProcessor(subredditName!, kvStore, provider, reddit);
       ui.showToast('Queue refreshed');
     } catch {
       ui.showToast('Refresh failed — try again');

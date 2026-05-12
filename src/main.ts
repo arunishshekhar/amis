@@ -108,7 +108,7 @@ Devvit.addTrigger({
     await analyseAndActOnPost(
       post,
       context.kvStore,
-      provider.embedding,
+      provider,
       context.reddit,
       !!autoActEnabled,
       autoRemoveThreshold
@@ -150,7 +150,7 @@ Devvit.addSchedulerJob({
       return;
     }
     const provider = await createAIProvider(context.settings, context.kvStore);
-    await runQueueProcessor(context.subredditName, context.kvStore, provider.embedding, context.reddit);
+    await runQueueProcessor(context.subredditName, context.kvStore, provider, context.reddit);
   },
 });
 
