@@ -13,5 +13,6 @@ export const KEYS = {
   insightIndex: 'insight_index',
   dashboardPostId: 'dashboard_post_id',
   directActionsEnabled: 'direct_actions_enabled',
+  aiConfig: 'ai_config',
   escalation: (id: string) => `escalation:${id}`,
 };
