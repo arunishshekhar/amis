@@ -10,6 +10,21 @@ const TRACKED_ACTIONS = new Set<string>([
   'spamcomment',
 ]);
 
+/** Drains an async iterable (Devvit Listing) or plain array into a flat array. */
+async function toArray<T>(listing: unknown): Promise<T[]> {
+  if (Array.isArray(listing)) return listing as T[];
+  // Devvit Listing implements AsyncIterable
+  if (listing != null && typeof (listing as any)[Symbol.asyncIterator] === 'function') {
+    const results: T[] = [];
+    for await (const item of listing as AsyncIterable<T>) {
+      results.push(item);
+    }
+    return results;
+  }
+  // Fallback: wrap scalar in array so callers never get undefined
+  return listing != null ? [listing as T] : [];
+}
+
 export async function fetchModLog(
   reddit: RedditAPIClient,
   subredditName: string
@@ -24,7 +39,8 @@ export async function fetchModLog(
       console.warn('fetchModLog: no mod log method found — returning empty');
       return [];
     }
-    const entries: any[] = await logMethod.call(client, { subredditName, limit: 100 });
+    const raw = await logMethod.call(client, { subredditName, limit: 100 });
+    const entries = await toArray<any>(raw);
     return entries
       .filter((e) => TRACKED_ACTIONS.has(e.action ?? e.type))
       .map((e): ModDecision => ({

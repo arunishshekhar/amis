@@ -220,10 +220,13 @@ const aiConfigForm = useForm(
 
   const onToggleFullscreen = async () => {
     const next = !fullscreenEnabled;
-    const nextConfig = {
-      ...(aiConfig ?? {}),
+    // Re-read from KV so we never overwrite existing provider/key fields with an
+    // empty object when aiConfig state hasn't loaded yet.
+    const current = await getAIConfig(kvStore) ?? {};
+    const nextConfig: AIConfig = {
+      ...current,
       fullscreenEnabled: next,
-    } as AIConfig;
+    };
     await saveAIConfig(kvStore, nextConfig);
     setAIConfig(nextConfig as JSONObject);
     setFullscreenEnabled(next);

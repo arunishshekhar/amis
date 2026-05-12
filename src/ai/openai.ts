@@ -12,6 +12,10 @@ class OpenAIEmbeddingClient implements EmbeddingClient {
       },
       body: JSON.stringify({ model: 'text-embedding-3-small', input: texts }),
     });
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new Error(`OpenAI Embed API error ${response.status} ${response.statusText}: ${body}`);
+    }
     const data = await response.json() as { data: Array<{ embedding: number[] }> };
     return data.data.map((d) => d.embedding);
   }
