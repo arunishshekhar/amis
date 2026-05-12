@@ -15,6 +15,7 @@ interface TriageViewProps {
   itemIndex: number;
   pendingInsightCount: number;
   directActionsEnabled: boolean;
+  fullscreenEnabled: boolean;
   subredditName: string;
   onRemoveDirect: (id: string) => void | Promise<void>;
   onApproveDirect: (id: string) => void | Promise<void>;
@@ -32,6 +33,7 @@ export function TriageView({
   itemIndex,
   pendingInsightCount,
   directActionsEnabled,
+  fullscreenEnabled,
   subredditName,
   onRemoveDirect,
   onApproveDirect,
@@ -43,14 +45,21 @@ export function TriageView({
   onRefresh,
 }: TriageViewProps): JSX.Element {
   const header = (
-    <hstack gap="small" alignment="start middle" padding="small" border="thin">
-      <text weight="bold" size="medium">⚡ AMIS</text>
-      <spacer grow />
-      <button appearance="plain" size="small" onPress={onViewInsights}>
-        💡 {pendingInsightCount}
-      </button>
-      <button appearance="plain" size="small" onPress={onViewSettings}>⚙</button>
-    </hstack>
+    <vstack gap="small">
+      <hstack gap="small" alignment="start middle" padding="small" border="thin">
+        <text weight="bold" size="medium">⚡ AMIS</text>
+        <spacer grow />
+        <button appearance="plain" size="small" onPress={onViewInsights}>
+          💡 {pendingInsightCount}
+        </button>
+        <button appearance="plain" size="small" onPress={onViewSettings}>⚙</button>
+      </hstack>
+      {fullscreenEnabled && (
+        <text size="xsmall" color="#a0a0ff">
+          Full screen dashboard active
+        </text>
+      )}
+    </vstack>
   );
 
   if (recs.length === 0 || itemIndex >= recs.length) {

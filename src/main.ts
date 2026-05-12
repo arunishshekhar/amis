@@ -98,7 +98,7 @@ Devvit.addSchedulerJob({
       console.error('queue-processor: subredditName unavailable — skipping');
       return;
     }
-    const provider = await createAIProvider(context.settings);
+    const provider = await createAIProvider(context.settings, context.kvStore);
     await runQueueProcessor(context.subredditName, context.kvStore, provider.embedding, context.reddit);
   },
 });
@@ -112,7 +112,7 @@ Devvit.addSchedulerJob({
     }
     const wikiPagesRaw = (await context.settings.get<string>('WIKI_PAGES')) ?? '';
     const wikiPages = wikiPagesRaw.split(',').map((p) => p.trim()).filter(Boolean);
-    const provider = await createAIProvider(context.settings);
+    const provider = await createAIProvider(context.settings, context.kvStore);
     const result = await runPolicyRefresh(
       context.subredditName,
       context.kvStore,
@@ -153,7 +153,7 @@ Devvit.addSchedulerJob({
       return;
     }
     const { runConsistencyEngine } = await import('./consistency/engine');
-    const provider = await createAIProvider(context.settings);
+    const provider = await createAIProvider(context.settings, context.kvStore);
     const summary = await runConsistencyEngine(
       context.kvStore,
       provider,
@@ -184,7 +184,7 @@ Devvit.addMenuItem({
     }
     const wikiPagesRaw = (await context.settings.get<string>('WIKI_PAGES')) ?? '';
     const wikiPages = wikiPagesRaw.split(',').map((p) => p.trim()).filter(Boolean);
-    const provider = await createAIProvider(context.settings);
+    const provider = await createAIProvider(context.settings, context.kvStore);
     const result = await runPolicyRefresh(
       context.subredditName,
       context.kvStore,
@@ -225,7 +225,7 @@ Devvit.addMenuItem({
       return;
     }
     const { runConsistencyEngine } = await import('./consistency/engine');
-    const provider = await createAIProvider(context.settings);
+    const provider = await createAIProvider(context.settings, context.kvStore);
     const summary = await runConsistencyEngine(
       context.kvStore,
       provider,
