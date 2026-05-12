@@ -7,4 +7,8 @@ export const KEYS = {
   policyEmbedding: (id: string) => `policy_embedding:${id}`,
   recommendation: (id: string) => `recommendation:${id}`,
   recommendationIndex: 'recommendation_index',
+  modDecision: (id: string) => `moddecision:${id}`,
+  modDecisionIndex: 'moddecision_index',
+  insight: (id: string) => `insight:${id}`,
+  insightIndex: 'insight_index',
 };
