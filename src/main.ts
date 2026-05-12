@@ -4,11 +4,20 @@ import { runQueueProcessor } from './jobs/queue-processor';
 import { runHealthCheck } from './triggers/health-check';
 import { runPolicyRefresh } from './triggers/policy-refresh';
 import { runRecommendationEngine } from './recommendations/engine';
+import { DashboardPost } from './ui/dashboard-post';
+import { makeDashboardPreview } from './ui/dashboard-preview';
+import { KEYS } from './storage/keys';
 
 Devvit.configure({
   kvStore: true,
   redditAPI: true,
   http: true,
+});
+
+Devvit.addCustomPostType({
+  name: 'AMIS Dashboard',
+  height: 'tall',
+  render: DashboardPost,
 });
 
 Devvit.addSettings([
@@ -232,6 +241,32 @@ Devvit.addMenuItem({
         `Consistency: ${summary.insightsGenerated} new insights generated`
       );
     }
+  },
+});
+
+Devvit.addMenuItem({
+  label: 'AMIS: Open Dashboard',
+  location: 'subreddit',
+  forUserType: 'moderator',
+  onPress: async (_event, context) => {
+    const { kvStore, reddit, ui, subredditName } = context;
+    if (!subredditName) {
+      ui.showToast('AMIS: subreddit name unavailable');
+      return;
+    }
+    const existingId = await kvStore.get(KEYS.dashboardPostId) as string | undefined;
+    if (existingId) {
+      const post = await reddit.getPostById(existingId);
+      ui.navigateTo(post);
+      return;
+    }
+    const post = await reddit.submitPost({
+      title: 'AMIS — AI Moderation Intelligence Dashboard',
+      subredditName,
+      preview: makeDashboardPreview(),
+    });
+    await kvStore.put(KEYS.dashboardPostId, post.id);
+    ui.navigateTo(post);
   },
 });
 
