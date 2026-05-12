@@ -2,15 +2,37 @@ import type { RedditAPIClient } from '@devvit/public-api';
 import { normalizePost, normalizeComment } from './normalizer';
 import type { ModItem } from '../types/mod-item';
 
+let _debugLogged = false;
+
 async function collectListing(listing: AsyncIterable<any>): Promise<ModItem[]> {
   const items: ModItem[] = [];
   for await (const item of listing) {
-    if ((item as any).type === 'post') {
-      items.push(normalizePost(item as any));
-    } else if ((item as any).type === 'comment') {
-      items.push(normalizeComment(item as any));
+    const raw = item as any;
+    // Devvit Post objects have a `title` property; Comment objects do not.
+    // The `.type` field is NOT set on Devvit API objects.
+    if (raw.title !== undefined || raw.postId === undefined) {
+      // Treat as a Post (has title, or no parentId/postId indicating comment)
+      // Extra guard: skip if no id at all
+      if (!raw.id) continue;
+      try {
+        items.push(normalizePost(raw));
+      } catch (e) {
+        console.warn(`fetchModQueue: normalizePost failed for id=${raw.id}:`, e);
+      }
+    } else if (raw.postId !== undefined) {
+      // Has postId — it's a Comment
+      try {
+        items.push(normalizeComment(raw));
+      } catch (e) {
+        console.warn(`fetchModQueue: normalizeComment failed for id=${raw.id}:`, e);
+      }
     } else {
-      console.warn(`fetchModQueue: skipping unknown item type "${(item as any).type}"`);
+      if (!_debugLogged) {
+        _debugLogged = true;
+        console.warn(
+          `fetchModQueue: unknown item shape — keys: ${Object.keys(raw).join(', ')}`
+        );
+      }
     }
   }
   return items;

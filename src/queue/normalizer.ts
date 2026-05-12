@@ -2,26 +2,41 @@ import type { Post, Comment } from '@devvit/public-api';
 import type { ModItem } from '../types/mod-item';
 
 export function normalizePost(post: Post): ModItem {
+  const raw = post as any;
+  // editedAt is a Date on edited posts; fall back to 0 (unedited)
+  const editedAt = raw.editedAt instanceof Date
+    ? raw.editedAt.getTime()
+    : typeof raw.editedAt === 'number'
+      ? raw.editedAt
+      : 0;
   return {
     id: post.id,
-    author: (post as any).authorName ?? '',
+    author: raw.authorName ?? '',
     timestamp: post.createdAt.getTime(),
-    title: (post as any).title,
-    body: (post as any).body ?? '',
-    reportReasons: ((post as any).reports ?? []).map((r: any) => r.reason),
+    editedAt,
+    title: raw.title ?? '',
+    body: raw.body ?? '',
+    reportReasons: (raw.reports ?? []).map((r: any) => r.reason),
     contentType: 'post',
     subredditId: post.subredditId,
   };
 }
 
 export function normalizeComment(comment: Comment): ModItem {
+  const raw = comment as any;
+  const editedAt = raw.editedAt instanceof Date
+    ? raw.editedAt.getTime()
+    : typeof raw.editedAt === 'number'
+      ? raw.editedAt
+      : 0;
   return {
     id: comment.id,
-    author: (comment as any).authorName ?? '',
+    author: raw.authorName ?? '',
     timestamp: comment.createdAt.getTime(),
+    editedAt,
     title: '',
-    body: (comment as any).body ?? '',
-    reportReasons: ((comment as any).reports ?? []).map((r: any) => r.reason),
+    body: raw.body ?? '',
+    reportReasons: (raw.reports ?? []).map((r: any) => r.reason),
     contentType: 'comment',
     subredditId: comment.subredditId,
   };

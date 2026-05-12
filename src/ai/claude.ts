@@ -13,8 +13,8 @@ class ClaudeTextGenClient implements TextGenerationClient {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5',
-        max_tokens: 300,
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 200,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
       }),

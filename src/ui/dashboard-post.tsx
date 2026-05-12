@@ -1,7 +1,7 @@
 import { Devvit, useState, useAsync, useForm } from '@devvit/public-api';
 import type { FormKey, JSONObject } from '@devvit/public-api';
 import { KEYS } from '../storage/keys';
-import { getAllRecommendations } from '../storage/recommendation-store';
+import { getAllRecommendations, markActioned } from '../storage/recommendation-store';
 import { listInsights, acknowledgeInsight } from '../storage/insight-store';
 import { getModItem } from '../storage/mod-item-store';
 import { createAIProvider } from '../ai/provider';
@@ -30,6 +30,7 @@ export function DashboardPost(context: Devvit.Context): JSX.Element {
   const [view, setView] = useState('triage');
   const [itemIndex, setItemIndex] = useState(0);
   const [localAcknowledged, setLocalAcknowledged] = useState<string[]>([]);
+  const [localActioned, setLocalActioned] = useState<string[]>([]);  // immediately hide actioned posts
   const [directActionsEnabled, setDirectActionsEnabled] = useState(false);
   const [aiConfig, setAIConfig] = useState<JSONObject | null>(null);
   const [fullscreenEnabled, setFullscreenEnabled] = useState(false);
@@ -126,8 +127,13 @@ const aiConfigForm = useForm(
       settings.get<string>('AI_PROVIDER'),
     ]);
 
-    // Only surface items that need moderator attention — filter out auto-approved
-    const actionable = rawRecs.filter((r) => r.suggestedAction !== 'approve');
+    // Only surface items that need moderator attention — filter out:
+    //   1. Posts AMIS auto-approved (suggestedAction === 'approve')
+    //   2. Posts any moderator has already actioned (remove/approve/escalate)
+    // Skipped items are NOT filtered — they remain visible so other mods can review.
+    const actionable = rawRecs.filter(
+      (r) => r.suggestedAction !== 'approve' && !r.actionedAt
+    );
     const sortedRecs = sortItemsByRisk(actionable);
 
     const modItems: Record<string, ModItem> = {};
@@ -185,7 +191,9 @@ const aiConfigForm = useForm(
     );
   }
 
-  const { recs, modItems, insights } = data;
+  const { recs: rawRecs, modItems, insights } = data;
+  // Filter out items actioned THIS session before KV has synced back
+  const recs = rawRecs.filter((r) => !localActioned.includes(r.itemId));
   const pendingInsights = insights.filter(
     (i) => !i.acknowledged && !localAcknowledged.includes(i.id)
   );
@@ -246,6 +254,12 @@ const aiConfigForm = useForm(
     }
   };
 
+  // Remove actioned item from local state immediately so it stops showing
+  const removeActioned = (id: string) => {
+    setLocalActioned((prev) => [...prev, id]);
+    // Keep itemIndex valid: if it would go past end it will show "Queue clear"
+  };
+
   const advanceItem = () => setItemIndex(itemIndex + 1);
 
   if (view === 'insights') {
@@ -285,23 +299,33 @@ const aiConfigForm = useForm(
       fullscreenEnabled={fullscreenEnabled}
       subredditName={subredditName ?? ''}
       onRemoveDirect={async (id) => {
-        await reddit.remove(id, false);
-        ui.showToast('Removed ✓');
-        advanceItem();
+        // Always mark actioned (cross-mod sync) + remove locally
+        removeActioned(id);
+        markActioned(kvStore, id, 'remove', context.userId ?? 'moderator').catch(console.error);
+        if (directActionsEnabled) {
+          reddit.remove(id, false).catch(console.error);
+        }
+        ui.showToast(directActionsEnabled ? 'Removed ✓' : 'Marked for removal ✓');
       }}
       onApproveDirect={async (id) => {
-        await reddit.approve(id);
-        ui.showToast('Approved ✓');
-        advanceItem();
+        removeActioned(id);
+        markActioned(kvStore, id, 'approve', context.userId ?? 'moderator').catch(console.error);
+        if (directActionsEnabled) {
+          reddit.approve(id).catch(console.error);
+        }
+        ui.showToast(directActionsEnabled ? 'Approved ✓' : 'Approved ✓');
       }}
       onNavigateToQueue={() => {
         ui.navigateTo(`https://www.reddit.com/r/${subredditName ?? ''}/about/modqueue`);
       }}
       onSkip={advanceItem}
       onEscalate={async (id) => {
-        await kvStore.put(KEYS.escalation(id), 'true');
+        removeActioned(id);
+        Promise.all([
+          kvStore.put(KEYS.escalation(id), 'true'),
+          markActioned(kvStore, id, 'escalate', context.userId ?? 'moderator'),
+        ]).catch(console.error);
         ui.showToast('Escalated ✓');
-        advanceItem();
       }}
       onViewInsights={() => setView('insights')}
       onViewSettings={() => setView('settings')}

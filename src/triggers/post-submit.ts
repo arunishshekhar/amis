@@ -103,32 +103,38 @@ export async function analyseAndActOnPost(
         );
 
         if (llmVerdict.violates && llmVerdict.confidence >= 70) {
-          // LLM says this post violates a rule — promote to remove regardless of
-          // what the embedding search found. Confidence 70+ from the LLM is reliable.
-          const llmConfidence = Math.min(100, llmVerdict.confidence);
+          // LLM confirmed a violation — use its verdict
           rec = {
             ...rec,
             suggestedAction: llmVerdict.confidence >= 90 ? 'remove' : 'monitor',
             riskLevel: llmVerdict.confidence >= 90 ? 'high' : 'medium',
-            confidenceScore: llmConfidence,
+            confidenceScore: Math.min(100, llmVerdict.confidence),
             matchedPolicyId: llmVerdict.matchedPolicyId ?? rec.matchedPolicyId,
             matchedPolicyTitle: llmVerdict.matchedPolicyTitle ?? rec.matchedPolicyTitle,
             rationale: `[LLM] ${llmVerdict.rationale}`,
           };
-        } else if (!llmVerdict.violates && rec.suggestedAction === 'remove') {
-          // LLM says it's fine but embeddings said remove — downgrade to monitor
-          // so a human can make the final call.
+        } else if (!llmVerdict.violates) {
+          // LLM says no violation — trust it and approve regardless of embedding score
           rec = {
             ...rec,
-            suggestedAction: 'monitor',
-            riskLevel: 'medium',
-            confidenceScore: Math.min(rec.confidenceScore, 60),
-            rationale: `[LLM disagrees] Embedding match flagged but LLM found no rule violation. Human review recommended.`,
+            suggestedAction: 'approve',
+            riskLevel: 'low',
+            confidenceScore: llmVerdict.confidence,
+            rationale: `[LLM] ${llmVerdict.rationale}`,
           };
         }
       }
     } catch (llmErr) {
-      // LLM failure is non-fatal — fall through to embedding-only result
+      // LLM failure is non-fatal — apply stricter embedding threshold to avoid false positives
+      if (rec.suggestedAction === 'remove' && rec.similarity < 0.75) {
+        rec = {
+          ...rec,
+          suggestedAction: 'monitor',
+          riskLevel: 'medium',
+          confidenceScore: Math.min(rec.confidenceScore, 55),
+          rationale: rec.rationale + ' (LLM unavailable — human review required)',
+        };
+      }
       console.warn('analyseAndActOnPost: LLM classification failed, using embedding result:', llmErr);
     }
 

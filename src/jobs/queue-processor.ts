@@ -6,7 +6,7 @@ import { saveEmbedding } from '../storage/embedding-store';
 import { getAllPolicies } from '../storage/policy-store';
 import { searchPolicies } from '../policy/searcher';
 import { generateRecommendation } from '../recommendations/generator';
-import { saveRecommendation } from '../storage/recommendation-store';
+import { saveRecommendation, purgeStaleRecommendations, getRecommendation } from '../storage/recommendation-store';
 import { classifyWithLLM } from '../policy/llm-classifier';
 import type { ModItem } from '../types/mod-item';
 
@@ -27,8 +27,15 @@ export async function runQueueProcessor(
   try {
     // 1. Fetch the current mod queue
     const items = await fetchModQueue(reddit, subredditName);
+    const activeIds = new Set(items.map((i) => i.id));
+
+    // 2. Purge recommendations for posts that are no longer in the mod queue
+    //    (deleted by author, or already actioned by a moderator).
+    //    This runs even if the queue is empty so the dashboard clears correctly.
+    await purgeStaleRecommendations(kv, activeIds);
+
     if (items.length === 0) {
-      console.log('runQueueProcessor: mod queue is empty');
+      console.log('runQueueProcessor: mod queue is empty — dashboard cleared');
       return;
     }
 
@@ -49,6 +56,13 @@ export async function runQueueProcessor(
     //    We process sequentially to avoid hammering the AI APIs simultaneously.
     for (const item of items) {
       try {
+        // Skip re-analysis if the post hasn't changed since we last processed it
+        const existingRec = await getRecommendation(kv, item.id);
+        const lastChanged = Math.max(item.editedAt ?? 0, item.timestamp);
+        if (existingRec && existingRec.generatedAt >= lastChanged && !existingRec.actionedAt) {
+          console.log(`runQueueProcessor: skipping unchanged item ${item.id}`);
+          continue;
+        }
         await analyseItem(kv, provider, item, policies);
       } catch (err) {
         console.error(`runQueueProcessor: failed to analyse item ${item.id}:`, err);
@@ -97,6 +111,7 @@ async function analyseItem(
       );
 
       if (llmVerdict.violates && llmVerdict.confidence >= 70) {
+        // LLM confirmed a violation — use its verdict
         rec = {
           ...rec,
           suggestedAction: llmVerdict.confidence >= 90 ? 'remove' : 'monitor',
@@ -106,17 +121,30 @@ async function analyseItem(
           matchedPolicyTitle: llmVerdict.matchedPolicyTitle ?? rec.matchedPolicyTitle,
           rationale: `[LLM] ${llmVerdict.rationale}`,
         };
-      } else if (!llmVerdict.violates && rec.suggestedAction === 'remove') {
+      } else if (!llmVerdict.violates) {
+        // LLM says no violation — trust it and approve regardless of embedding score
         rec = {
           ...rec,
-          suggestedAction: 'monitor',
-          riskLevel: 'medium',
-          confidenceScore: Math.min(rec.confidenceScore, 60),
-          rationale: '[LLM disagrees] Embedding match flagged but LLM found no violation. Human review recommended.',
+          suggestedAction: 'approve',
+          riskLevel: 'low',
+          confidenceScore: llmVerdict.confidence,
+          rationale: `[LLM] ${llmVerdict.rationale}`,
         };
       }
     }
   } catch (llmErr) {
+    // LLM failed — apply a stricter threshold on the embedding-only result
+    // to avoid false positives. Require similarity >= 0.75 to suggest remove;
+    // anything lower is demoted to monitor so humans make the final call.
+    if (rec.suggestedAction === 'remove' && rec.similarity < 0.75) {
+      rec = {
+        ...rec,
+        suggestedAction: 'monitor',
+        riskLevel: 'medium',
+        confidenceScore: Math.min(rec.confidenceScore, 55),
+        rationale: rec.rationale + ' (LLM unavailable — human review required)',
+      };
+    }
     console.warn(`runQueueProcessor: LLM failed for ${item.id}, using embedding result:`, llmErr);
   }
 

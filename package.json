@@ -1,6 +1,6 @@
 {
   "name": "ai-mis",
-  "version": "0.0.7",
+  "version": "0.0.9",
   "private": true,
   "scripts": {
     "build": "devvit build",

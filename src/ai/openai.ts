@@ -37,9 +37,13 @@ class OpenAITextGenClient implements TextGenerationClient {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_tokens: 300,
+        max_tokens: 200,
       }),
     });
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new Error(`OpenAI Chat API error ${response.status}: ${body}`);
+    }
     const data = await response.json() as {
       choices: Array<{ message: { content: string } }>;
     };

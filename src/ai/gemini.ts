@@ -31,18 +31,21 @@ class GeminiTextGenClient implements TextGenerationClient {
 
   async complete(systemPrompt: string, userPrompt: string): Promise<string> {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${this.apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${this.apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           system_instruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-          generationConfig: { maxOutputTokens: 300 },
+          generationConfig: { maxOutputTokens: 200 },
         }),
       }
     );
-    if (!response.ok) throw new Error(`Gemini GenerateContent API error: ${response.status} ${response.statusText}`);
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => '');
+      throw new Error(`Gemini GenerateContent API error: ${response.status} ${response.statusText}: ${errBody}`);
+    }
     const data = await response.json() as {
       candidates: Array<{ content: { parts: Array<{ text: string }> } }>;
     };

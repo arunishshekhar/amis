@@ -21,4 +21,12 @@ export interface Recommendation {
   duplicateOf?: string | null;
   /** Cosine similarity to the original post */
   duplicateSimilarity?: number;
+  /**
+   * Cross-mod sync: set when any moderator explicitly acts on this item
+   * (Remove / Approve / Escalate). Items with actionedAt are hidden for ALL
+   * mods. Skip does NOT set this field — skipped items remain visible.
+   */
+  actionedAt?: number;            // Unix ms when action was taken
+  actionedBy?: string;            // Moderator username who acted
+  actionTaken?: 'remove' | 'approve' | 'escalate';
 }
