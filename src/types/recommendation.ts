@@ -15,4 +15,10 @@ export interface Recommendation {
   autoActed?: boolean;
   /** The action that was automatically taken */
   autoActedAction?: SuggestedAction;
+  /** Set when the post is a near-duplicate of a previously seen post */
+  isDuplicate?: boolean;
+  /** The post ID of the original post this is a duplicate of */
+  duplicateOf?: string | null;
+  /** Cosine similarity to the original post */
+  duplicateSimilarity?: number;
 }
