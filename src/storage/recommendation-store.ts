@@ -70,10 +70,11 @@ export async function removeRecommendation(kv: KVStore, itemId: string): Promise
 }
 
 /**
- * Removes all stored recommendations that are NOT in activeIds.
- * Called at the start of runQueueProcessor so that posts which have already
- * been removed/approved by a moderator (or deleted by the author) are purged
- * from the dashboard queue on the next refresh.
+ * Removes all stored recommendations that are NOT in activeIds,
+ * EXCEPT items that have already been actioned by a moderator — those
+ * are kept indefinitely as history.
+ * Called at the start of runQueueProcessor so that posts which have been
+ * removed/approved by Reddit (not via AMIS) are purged from the active queue.
  */
 export async function purgeStaleRecommendations(
   kv: KVStore,
@@ -82,13 +83,40 @@ export async function purgeStaleRecommendations(
   const raw = await kv.get(KEYS.recommendationIndex);
   if (!raw) return 0;
   const ids: string[] = JSON.parse(raw as string);
-  const stale = ids.filter((id) => !activeIds.has(id));
+
+  // Fetch all recs to determine which can be safely purged
+  const recs = await Promise.all(ids.map((id) => getRecommendation(kv, id)));
+
+  // Stale = not in active queue AND not previously actioned by a mod
+  const stale = ids.filter((_id, i) => {
+    const rec = recs[i];
+    if (!rec) return true;  // orphan — purge
+    if (rec.actionedAt) return false; // keep as history
+    if (rec.autoActed) return false;  // keep AI-acted items as history
+    return !activeIds.has(_id);       // purge only if no longer in queue
+  });
+
   if (stale.length === 0) return 0;
 
   await Promise.all(stale.map((id) => kv.delete(KEYS.recommendation(id))));
-  const remaining = ids.filter((id) => activeIds.has(id));
+  const remaining = ids.filter((id) => !stale.includes(id));
   await kv.put(KEYS.recommendationIndex, JSON.stringify(remaining));
 
   console.log(`purgeStaleRecommendations: removed ${stale.length} stale items: ${stale.join(', ')}`);
   return stale.length;
+}
+
+/**
+ * Returns all recommendations that have been explicitly actioned by a mod
+ * or auto-acted by AI — i.e. the complete moderation history.
+ * Sorted newest-first by actionedAt or generatedAt.
+ */
+export async function getHistoryRecommendations(kv: KVStore): Promise<Recommendation[]> {
+  const all = await getAllRecommendations(kv);
+  const history = all.filter((r) => r.actionedAt != null || r.autoActed === true);
+  return history.sort((a, b) => {
+    const ta = a.actionedAt ?? a.generatedAt ?? 0;
+    const tb = b.actionedAt ?? b.generatedAt ?? 0;
+    return tb - ta; // newest first
+  });
 }

@@ -18,9 +18,11 @@ const RISK_BAR_COLOR: Record<RiskLevel, string> = {
 interface TriageViewProps {
   recs: Recommendation[];
   modItems: Record<string, ModItem>;
+  aiApprovedCount: number;
   itemIndex: number;
   pendingInsightCount: number;
-  directActionsEnabled: boolean;
+  isRefreshing: boolean;
+  refreshSecondsLeft: number;
   fullscreenEnabled: boolean;
   subredditName: string;
   onRemoveDirect: (id: string) => void | Promise<void>;
@@ -29,6 +31,7 @@ interface TriageViewProps {
   onSkip: () => void;
   onEscalate: (id: string) => void | Promise<void>;
   onViewInsights: () => void;
+  onViewHistory: () => void;
   onViewSettings: () => void;
   onRefresh: () => void | Promise<void>;
 }
@@ -36,9 +39,11 @@ interface TriageViewProps {
 export function TriageView({
   recs,
   modItems,
+  aiApprovedCount,
   itemIndex,
   pendingInsightCount,
-  directActionsEnabled,
+  isRefreshing,
+  refreshSecondsLeft,
   fullscreenEnabled,
   subredditName,
   onRemoveDirect,
@@ -47,6 +52,7 @@ export function TriageView({
   onSkip,
   onEscalate,
   onViewInsights,
+  onViewHistory,
   onViewSettings,
   onRefresh,
 }: TriageViewProps): JSX.Element {
@@ -69,16 +75,27 @@ export function TriageView({
   const mutedText = '#71717aFF';     // zinc-500
   const subtleText = '#a1a1aaFF';    // zinc-400
 
+  // Refreshing banner — shown under header while AI job is running
+  const refreshBanner = isRefreshing ? (
+    <hstack backgroundColor="#1c1917FF" padding="xsmall" alignment="center middle" gap="small">
+      <text size="xsmall" color="#f97316FF" weight="bold">
+        ⏳ AI is analysing the queue{refreshSecondsLeft > 0 ? ` — ${String(refreshSecondsLeft)}s` : ''}
+      </text>
+      <text size="xsmall" color="#78716cFF">Dashboard refreshes automatically</text>
+    </hstack>
+  ) : null;
+
   const header = (
     <hstack gap="small" alignment="start middle" padding="small"
       backgroundColor={cardBg} border="thin">
       <text weight="bold" size="medium" color="#e4e4e7FF">⚡ AMIS</text>
       <spacer grow />
-      {/* Insights button — always visible, highlighted when pending */}
+      <button appearance="plain" size="small" onPress={onViewHistory}>📋</button>
+      {/* Insights button */}
       <button appearance="plain" size="small" onPress={onViewInsights}>
         {pendingInsightCount > 0
           ? `💡 ${String(pendingInsightCount)}`
-          : '💡 0'
+          : '💡'
         }
       </button>
       <button appearance="plain" size="small" onPress={onViewSettings}>⚙️</button>
@@ -90,12 +107,25 @@ export function TriageView({
     return (
       <vstack grow backgroundColor={bgColor}>
         {header}
+        {refreshBanner}
         <vstack alignment="center middle" grow gap="medium">
-          <text size="xxlarge">✅</text>
-          <text size="large" color="#e4e4e7FF" weight="bold">Queue clear</text>
-          <text color={mutedText} size="small">No posts need review right now</text>
+          {isRefreshing
+            ? <text size="xxlarge">⏳</text>
+            : <text size="xxlarge">✅</text>
+          }
+          <text size="large" color="#e4e4e7FF" weight="bold">
+            {isRefreshing ? 'Analysing...' : 'Queue clear'}
+          </text>
+          {aiApprovedCount > 0 && !isRefreshing
+            ? <text color={mutedText} size="small">
+                AI approved {String(aiApprovedCount)} post{aiApprovedCount !== 1 ? 's' : ''} — auto-refreshes every 15s
+              </text>
+            : !isRefreshing
+              ? <text color={mutedText} size="small">No posts need review right now — auto-refreshes every 15s</text>
+              : <text color="#f97316FF" size="small">Results appear automatically when done</text>
+          }
           <button size="small" appearance="secondary" onPress={onRefresh}>
-            Refresh ↻
+            {isRefreshing ? '⏳ Running...' : 'Refresh ↻'}
           </button>
         </vstack>
       </vstack>
@@ -103,8 +133,6 @@ export function TriageView({
   }
 
   // Transition: show next item dimmed for a smoother feel
-  // We use isTransitioning to render at reduced opacity by showing a
-  // placeholder post-card with just the title of the next item.
   const nextRec = isTransitioning && recs.length > 0
     ? recs[Math.min(itemIndex, recs.length - 1)]
     : null;
@@ -116,6 +144,7 @@ export function TriageView({
     return (
       <vstack grow backgroundColor={bgColor}>
         {header}
+        {refreshBanner}
         <vstack padding="small" gap="small" grow>
           <vstack backgroundColor={cardBg} cornerRadius="medium" padding="medium" gap="small" grow>
             <hstack gap="small" alignment="start middle">
@@ -154,8 +183,6 @@ export function TriageView({
   const riskBorderColor = RISK_BAR_COLOR[rec.riskLevel];
   const confidenceWidth = Math.round(rec.confidenceScore);
 
-  // All action buttons always call the handler — parent decides whether
-  // to call Reddit API based on directActionsEnabled.
   const handleRemove = () => triggerTransition(() => onRemoveDirect(rec.itemId));
   const handleApprove = () => triggerTransition(() => onApproveDirect(rec.itemId));
   const handleEscalate = () => triggerTransition(() => onEscalate(rec.itemId));
@@ -183,7 +210,7 @@ export function TriageView({
     </hstack>
   ) : null;
 
-  // Main card content (shared between normal and fullscreen)
+  // Main post card
   const postCard = (
     <vstack backgroundColor={cardBg} cornerRadius="medium" padding="medium" gap="small" grow>
 
@@ -258,6 +285,7 @@ export function TriageView({
       {high > 0 && <text size="xsmall" color="#ef4444FF">⛔ {String(high)}</text>}
       {medium > 0 && <text size="xsmall" color="#f97316FF">⚠ {String(medium)}</text>}
       {low > 0 && <text size="xsmall" color="#22c55eFF">✅ {String(low)}</text>}
+      {isRefreshing && <text size="xsmall" color="#f97316FF">⏳ {String(refreshSecondsLeft)}s</text>}
     </hstack>
   );
 
@@ -265,6 +293,7 @@ export function TriageView({
     return (
       <vstack grow padding="small" backgroundColor={bgColor} gap="small">
         {header}
+        {refreshBanner}
         <hstack gap="small" grow>
           <vstack grow gap="small">
             {postCard}
@@ -280,7 +309,9 @@ export function TriageView({
               {high > 0 && <text size="small" color="#ef4444FF">{String(high)} high risk</text>}
               {medium > 0 && <text size="small" color="#f97316FF">{String(medium)} medium</text>}
               {low > 0 && <text size="small" color="#22c55eFF">{String(low)} low</text>}
-              <button size="small" appearance="secondary" onPress={onRefresh}>Refresh ↻</button>
+              <button size="small" appearance="secondary" onPress={onRefresh}>
+                {isRefreshing ? '⏳ Running...' : 'Refresh ↻'}
+              </button>
             </vstack>
           </vstack>
         </hstack>
@@ -291,6 +322,7 @@ export function TriageView({
   return (
     <vstack grow backgroundColor={bgColor} gap="small" padding="xsmall">
       {header}
+      {refreshBanner}
       {postCard}
       {actionButtons}
       {progressRow}

@@ -37,7 +37,7 @@ class OpenAITextGenClient implements TextGenerationClient {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_tokens: 200,
+        max_tokens: 400,
       }),
     });
     if (!response.ok) {

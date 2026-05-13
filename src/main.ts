@@ -258,11 +258,10 @@ Devvit.addMenuItem({
   location: 'subreddit',
   forUserType: 'moderator',
   onPress: async (_event, context) => {
-    const summary = await runRecommendationEngine(context.kvStore);
-    context.ui.showToast(
-      `Analysis: ${summary.removed} remove, ${summary.monitored} monitor, ` +
-        `${summary.approved} approve, ${summary.escalated} escalate`
-    );
+    // Schedule as a job — menu item handlers time out too quickly to run
+    // the full AI pipeline inline.
+    await context.scheduler.runJob({ name: 'queue-processor', runAt: new Date() });
+    context.ui.showToast('Queue analysis started — results in ~30 s');
   },
 });
 
@@ -275,23 +274,9 @@ Devvit.addMenuItem({
       context.ui.showToast('AMIS: subreddit name unavailable');
       return;
     }
-    const { runConsistencyEngine } = await import('./consistency/engine');
-    const provider = await createAIProvider(context.settings, context.kvStore);
-    const summary = await runConsistencyEngine(
-      context.kvStore,
-      provider,
-      context.reddit,
-      context.subredditName
-    );
-    if (summary.skipped) {
-      context.ui.showToast(
-        `Consistency: not enough data (${summary.decisionCount}/50 decisions)`
-      );
-    } else {
-      context.ui.showToast(
-        `Consistency: ${summary.insightsGenerated} new insights generated`
-      );
-    }
+    // Schedule as a job — inline execution times out before the AI calls finish.
+    await context.scheduler.runJob({ name: 'consistency-analysis', runAt: new Date() });
+    context.ui.showToast('Consistency analysis started — check 💡 Insights in the dashboard in ~60s');
   },
 });
 

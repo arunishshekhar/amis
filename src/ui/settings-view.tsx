@@ -4,10 +4,8 @@ interface SettingsViewProps {
   aiProvider: string;
   aiConfigPresent: boolean;
   fullscreenEnabled: boolean;
-  directActionsEnabled: boolean;
   itemCount: number;
   onBack: () => void;
-  onToggleDirectActions: () => void | Promise<void>;
   onRefreshQueue: () => void | Promise<void>;
   onOpenAIConfig: () => void | Promise<void>;
   onToggleFullscreen: () => void | Promise<void>;
@@ -17,39 +15,37 @@ export function SettingsView({
   aiProvider,
   aiConfigPresent,
   fullscreenEnabled,
-  directActionsEnabled,
   itemCount,
   onBack,
-  onToggleDirectActions,
   onRefreshQueue,
   onOpenAIConfig,
   onToggleFullscreen,
 }: SettingsViewProps): JSX.Element {
   return (
-    <vstack padding="medium" gap="medium" grow>
+    <vstack padding="medium" gap="medium" grow backgroundColor="#09090bFF">
       <hstack gap="small" alignment="start middle">
         <button appearance="plain" size="small" onPress={onBack}>← Back</button>
-        <text weight="bold" size="medium">Settings</text>
+        <text weight="bold" size="medium" color="#e4e4e7FF">Settings</text>
       </hstack>
 
-      <vstack gap="small" padding="small" backgroundColor="#1a1a2eFF" cornerRadius="small">
-        <text size="xsmall" color="#a0a0ff" weight="bold">AI CONFIGURATION</text>
-        <text size="small">{aiProvider}</text>
-        <text size="xsmall" color="#888888" wrap>
-          {aiConfigPresent ? 'Using KV-backed AI config' : 'Using app-level settings fallback'}
+      <vstack gap="small" padding="small" backgroundColor="#18181bFF" cornerRadius="small">
+        <text size="xsmall" color="#818cf8FF" weight="bold">AI CONFIGURATION</text>
+        <text size="small" color="#e4e4e7FF">{aiProvider}</text>
+        <text size="xsmall" color="#71717aFF" wrap>
+          {aiConfigPresent ? 'Using KV-backed AI config' : 'Using app-level settings'}
         </text>
         <button size="small" appearance="secondary" onPress={onOpenAIConfig}>
           Edit AI config
         </button>
       </vstack>
 
-      <vstack gap="small" padding="small" backgroundColor="#1a1a2eFF" cornerRadius="small">
-        <text size="xsmall" color="#a0a0ff" weight="bold">FULL SCREEN</text>
-        <text size="xsmall" color="#888888" wrap>
-          Enable the dashboard full screen layout for a more expansive review experience.
+      <vstack gap="small" padding="small" backgroundColor="#18181bFF" cornerRadius="small">
+        <text size="xsmall" color="#818cf8FF" weight="bold">FULL SCREEN LAYOUT</text>
+        <text size="xsmall" color="#71717aFF" wrap>
+          Show a wider side-panel layout inside the post card.
         </text>
         <hstack alignment="start middle" gap="small">
-          <text size="small" weight="bold">{fullscreenEnabled ? 'ON' : 'OFF'}</text>
+          <text size="small" weight="bold" color="#e4e4e7FF">{fullscreenEnabled ? 'ON' : 'OFF'}</text>
           <button
             size="small"
             appearance={fullscreenEnabled ? 'destructive' : 'secondary'}
@@ -60,28 +56,14 @@ export function SettingsView({
         </hstack>
       </vstack>
 
-      <vstack gap="small" padding="small" backgroundColor="#1a1a2eFF" cornerRadius="small">
-        <text size="xsmall" color="#a0a0ff" weight="bold">DIRECT ACTIONS</text>
-        <text size="xsmall" color="#888888" wrap>
-          Execute remove/approve from dashboard without leaving Reddit
+      <vstack gap="small" padding="small" backgroundColor="#18181bFF" cornerRadius="small">
+        <text size="xsmall" color="#818cf8FF" weight="bold">QUEUE STATUS</text>
+        <text size="small" color="#e4e4e7FF">{String(itemCount)} item{itemCount !== 1 ? 's' : ''} pending review</text>
+        <text size="xsmall" color="#71717aFF" wrap>
+          Dashboard auto-refreshes every 15s. Actions (Remove/Approve) are executed immediately on Reddit.
         </text>
-        <hstack alignment="start middle" gap="small">
-          <text size="small" weight="bold">{directActionsEnabled ? 'ON' : 'OFF'}</text>
-          <button
-            size="small"
-            appearance={directActionsEnabled ? 'destructive' : 'secondary'}
-            onPress={onToggleDirectActions}
-          >
-            {directActionsEnabled ? 'Disable' : 'Enable'}
-          </button>
-        </hstack>
-      </vstack>
-
-      <vstack gap="small" padding="small" backgroundColor="#1a1a2eFF" cornerRadius="small">
-        <text size="xsmall" color="#a0a0ff" weight="bold">QUEUE STATUS</text>
-        <text size="small">{itemCount} items in queue</text>
         <button size="small" appearance="secondary" onPress={onRefreshQueue}>
-          Refresh Queue ↻
+          Run AI Analysis ↻
         </button>
       </vstack>
     </vstack>

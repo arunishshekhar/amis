@@ -4,15 +4,15 @@ import type { ModItem } from '../types/mod-item';
 
 let _debugLogged = false;
 
+/** Posts older than this are excluded from the unmoderated list to avoid re-analysing stale content. */
+const UNMODERATED_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
 async function collectListing(listing: AsyncIterable<any>): Promise<ModItem[]> {
   const items: ModItem[] = [];
   for await (const item of listing) {
     const raw = item as any;
     // Devvit Post objects have a `title` property; Comment objects do not.
-    // The `.type` field is NOT set on Devvit API objects.
     if (raw.title !== undefined || raw.postId === undefined) {
-      // Treat as a Post (has title, or no parentId/postId indicating comment)
-      // Extra guard: skip if no id at all
       if (!raw.id) continue;
       try {
         items.push(normalizePost(raw));
@@ -20,7 +20,6 @@ async function collectListing(listing: AsyncIterable<any>): Promise<ModItem[]> {
         console.warn(`fetchModQueue: normalizePost failed for id=${raw.id}:`, e);
       }
     } else if (raw.postId !== undefined) {
-      // Has postId — it's a Comment
       try {
         items.push(normalizeComment(raw));
       } catch (e) {
@@ -29,9 +28,7 @@ async function collectListing(listing: AsyncIterable<any>): Promise<ModItem[]> {
     } else {
       if (!_debugLogged) {
         _debugLogged = true;
-        console.warn(
-          `fetchModQueue: unknown item shape — keys: ${Object.keys(raw).join(', ')}`
-        );
+        console.warn(`fetchModQueue: unknown item shape — keys: ${Object.keys(raw).join(', ')}`);
       }
     }
   }
@@ -43,14 +40,24 @@ export async function fetchModQueue(
   subredditName: string,
   limit = 100
 ): Promise<ModItem[]> {
-  // Devvit gRPC proto uses `subreddit` not `subredditName` as the field name
   const opts = { subreddit: subredditName, limit } as any;
+  const cutoff = Date.now() - UNMODERATED_MAX_AGE_MS;
 
-  const [reported, spam, unmoderated] = await Promise.all([
+  const [reported, spam, unmoderatedRaw] = await Promise.all([
     collectListing(await (reddit as any).getModQueue(opts)),
     collectListing(await (reddit as any).getSpam(opts)),
     collectListing(await (reddit as any).getUnmoderated(opts)),
   ]);
+
+  // Only include unmoderated posts from the last 7 days.
+  // Posts older than that are stale (e.g. old test posts) and clutter the queue.
+  const unmoderated = unmoderatedRaw.filter((item) => item.timestamp >= cutoff);
+  if (unmoderatedRaw.length !== unmoderated.length) {
+    console.log(
+      `fetchModQueue: dropped ${unmoderatedRaw.length - unmoderated.length} stale ` +
+      `unmoderated post(s) older than 7 days`
+    );
+  }
 
   const seen = new Set<string>();
   const all: ModItem[] = [];

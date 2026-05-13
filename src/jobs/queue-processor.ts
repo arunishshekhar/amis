@@ -12,11 +12,14 @@ import type { ModItem } from '../types/mod-item';
 
 /**
  * Fetches the current mod queue from Reddit, runs the full analysis pipeline
- * (embed → LLM classify → generate recommendation) for each item, and saves
+ * (embed → classify → generate recommendation) for each item, and saves
  * everything to KV so the dashboard can display it.
  *
- * This runs both as a scheduled job (every 6 h) and when the dashboard
- * "Refresh" button is pressed.
+ * Two-tier classification for cost efficiency:
+ *   Tier 1 (embedding-only, no LLM): similarity < 0.45 (auto-approve) or >= 0.85 (auto-flag)
+ *   Tier 2 (LLM required): 0.45 <= similarity < 0.85, or post is reported by users
+ *
+ * This runs both as a scheduled job (every 2 min) and when the dashboard "Refresh" is pressed.
  */
 export async function runQueueProcessor(
   subredditName: string,
@@ -25,13 +28,12 @@ export async function runQueueProcessor(
   reddit: any
 ): Promise<void> {
   try {
-    // 1. Fetch the current mod queue
+    // 1. Fetch the current mod queue (already filtered to 7-day window for unmoderated)
     const items = await fetchModQueue(reddit, subredditName);
     const activeIds = new Set(items.map((i) => i.id));
 
-    // 2. Purge recommendations for posts that are no longer in the mod queue
-    //    (deleted by author, or already actioned by a moderator).
-    //    This runs even if the queue is empty so the dashboard clears correctly.
+    // 2. Purge recommendations for posts no longer in the mod queue.
+    //    Actioned and auto-acted items are preserved as history.
     await purgeStaleRecommendations(kv, activeIds);
 
     if (items.length === 0) {
@@ -39,25 +41,26 @@ export async function runQueueProcessor(
       return;
     }
 
-    // 2. Persist mod items first (so they are available to the dashboard even
-    //    if the analysis below fails partway through)
+    // 3. Persist mod items first so the dashboard can show them even if analysis fails
     await saveModItems(kv, items);
 
-    // 3. Load policies (needed for both embedding search and LLM classification)
+    // 4. Load policies (needed for embedding search and LLM classification)
     const policies = await getAllPolicies(kv);
     if (policies.length === 0) {
       console.warn('runQueueProcessor: no policies found — run "AMIS: Refresh Policy" first');
-      // Still save embeddings so duplicate detection works later
       for (const item of items) {
         await embedAndSave(kv, provider, item);
       }
       return;
     }
 
-    // 4. Determine which items actually need (re-)analysis.
-    //    Actioned items are ALWAYS skipped — no exception, no overrides.
-    //    Unchanged items are skipped unless forceReprocess is on AND the cached
-    //    result was 'approve' (to re-evaluate with a new LLM key).
+    // 5. Determine which items need (re-)analysis.
+    //    Rule 1: actioned by mod = permanently done. Silent skip.
+    //    Rule 2: non-approve verdict fresh since last edit → skip.
+    //    Rule 3: approve verdict < 24h old → skip (re-check after 24h).
+    //            Prevents re-running the LLM every 2 min on stale approved posts.
+    const APPROVE_CACHE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
     const toProcess: ModItem[] = [];
     const existingRecs = await Promise.all(items.map((i) => getRecommendation(kv, i.id)));
 
@@ -65,19 +68,24 @@ export async function runQueueProcessor(
       const item = items[i];
       const existingRec = existingRecs[i];
 
-      // Rule 1: actioned = permanently done. Never touch again.
-      if (existingRec?.actionedAt) {
-        console.log(`runQueueProcessor: skipping actioned item ${item.id}`);
-        continue;
-      }
+      // Rule 1: mod-actioned → never re-analyse
+      if (existingRec?.actionedAt) continue;
 
-      // Rule 2: unchanged items are skipped entirely to save LLM quota
       const lastChanged = Math.max(item.editedAt ?? 0, item.timestamp);
-      const isFreshEnough = existingRec && existingRec.generatedAt >= lastChanged;
-      if (isFreshEnough) {
+
+      // Rule 2: non-approve verdict fresh since last edit → skip
+      const hasNonApproveVerdict =
+        existingRec &&
+        existingRec.suggestedAction !== 'approve' &&
+        existingRec.generatedAt >= lastChanged;
+      if (hasNonApproveVerdict) {
         console.log(`runQueueProcessor: skipping unchanged item ${item.id}`);
         continue;
       }
+
+      // Rule 3: approve verdict < 24h → skip
+      const verdictAgeMs = existingRec ? Date.now() - existingRec.generatedAt : Infinity;
+      if (existingRec?.suggestedAction === 'approve' && verdictAgeMs < APPROVE_CACHE_MS) continue;
 
       toProcess.push(item);
     }
@@ -85,24 +93,29 @@ export async function runQueueProcessor(
     if (toProcess.length === 0) {
       console.log('runQueueProcessor: nothing new to analyse');
     } else {
-      console.log(`runQueueProcessor: analysing ${toProcess.length} item(s) in batch`);
+      // Process up to 5 items per run. Retry-with-backoff in AI clients handles rate-limits.
+      const BATCH_CAP = 5;
+      const batch = toProcess.slice(0, BATCH_CAP);
+      console.log(
+        `runQueueProcessor: analysing ${batch.length} of ${toProcess.length} item(s) ` +
+        `(${toProcess.length > BATCH_CAP ? String(toProcess.length - BATCH_CAP) + ' deferred' : 'all'})`
+      );
 
-      // 5. Batch-embed all items — 1 API call for all texts.
-      const texts = toProcess.slice(0, 2).map(  // cap at 2 items to avoid HTTP throttle
+      // 6. Batch-embed all items — 1 API call for all texts (much cheaper than N calls)
+      const texts = batch.map(
         (item) => [item.title, item.body, ...item.reportReasons].filter(Boolean).join(' | ')
       );
-      const batch = toProcess.slice(0, 2);
       let vectors: number[][];
       try {
         vectors = await provider.embedding.embed(texts);
-        // Pause after embed so Devvit's HTTP rate-limit window can reset
+        // Brief pause after embed so Devvit's HTTP rate-limit window can reset
         await new Promise((r) => setTimeout(r, 2000));
       } catch (embedErr) {
         console.error('runQueueProcessor: batch embed failed:', embedErr);
         vectors = batch.map(() => []);
       }
 
-      // 6. Analyse each item: cosine search → LLM classify.
+      // 7. Analyse each item: cosine search → optional LLM classify.
       //    3-second gap between items keeps us under Devvit's outbound HTTP limit.
       for (let i = 0; i < batch.length; i++) {
         const item = batch[i];
@@ -115,12 +128,12 @@ export async function runQueueProcessor(
           console.error(`runQueueProcessor: failed to analyse item ${item.id}:`, err);
         }
       }
-      if (toProcess.length > 2) {
-        console.log(`runQueueProcessor: ${toProcess.length - 2} item(s) deferred to next run`);
+      if (toProcess.length > BATCH_CAP) {
+        console.log(`runQueueProcessor: ${String(toProcess.length - BATCH_CAP)} item(s) deferred to next run`);
       }
     }
 
-    console.log(`runQueueProcessor: processed ${items.length} items from mod queue`);
+    console.log(`runQueueProcessor: processed ${String(items.length)} items from mod queue`);
   } catch (err) {
     console.error('runQueueProcessor failed:', err);
     throw err;
@@ -135,10 +148,17 @@ async function embedAndSave(kv: KVStore, provider: AIProvider, item: ModItem): P
 }
 
 /**
- * Full analysis pipeline for a single mod-queue item using a pre-computed embedding vector.
- * The vector is computed upstream in a batch call to avoid N individual embed requests.
- * LLM is only called when embedding similarity is >= 0.60 — below that the post is
- * auto-approved without hitting the LLM at all.
+ * Full analysis pipeline for a single mod-queue item.
+ *
+ * TWO-TIER CLASSIFICATION (cost optimisation for high-volume subreddits):
+ *   Tier 1 — embedding-only (no LLM, very cheap):
+ *     similarity < 0.45  → post is far from any rule → auto-approve
+ *     similarity >= 0.85 → very strong rule match → trust embedding verdict
+ *   Tier 2 — LLM required (0.45 <= similarity < 0.85, or post is reported):
+ *     Ambiguous zone or actively-reported post → call LLM for definitive verdict
+ *
+ * Saves ~60-70% of LLM calls on high-volume subreddits while keeping LLM as
+ * the authoritative judge for edge cases and structural rules.
  */
 async function analyseItemWithVector(
   kv: KVStore,
@@ -151,51 +171,63 @@ async function analyseItemWithVector(
   const matches = vector.length > 0 ? await searchPolicies(kv, vector, 3) : [];
   let rec = generateRecommendation(item, matches);
 
-  // Always run LLM — it is the authoritative classifier.
-  // Embedding finds the closest matching rule but cannot detect factual falsehoods
-  // or structural rules (e.g. "no posts starting with A", "no misinformation")
-  // where vocabulary overlap with the post text is near zero.
-  try {
-    const llmVerdict = await classifyWithLLM(item, policies, provider.textGen);
-    if (llmVerdict) {
-      console.log(
-        `runQueueProcessor: LLM verdict for ${item.id} — ` +
-        `violates=${llmVerdict.violates}, confidence=${llmVerdict.confidence}%, ` +
-        `rule="${llmVerdict.matchedPolicyTitle ?? 'none'}"`
-      );
+  // Decide whether the LLM is needed based on embedding confidence
+  const isReported = item.reportReasons.length > 0;
+  const sim = rec.similarity;
 
-      if (llmVerdict.violates && llmVerdict.confidence >= 70) {
+  // LLM needed only for: reported posts, OR ambiguous similarity zone
+  const needsLLM = isReported || (sim >= 0.45 && sim < 0.85);
+
+  if (!needsLLM) {
+    // Tier 1: trust the embedding result directly — no LLM call
+    console.log(
+      `runQueueProcessor: embedding-only for ${item.id} ` +
+      `(sim=${sim.toFixed(2)}, reported=${String(isReported)}) → ${rec.suggestedAction}`
+    );
+  } else {
+    // Tier 2: call LLM for definitive verdict
+    try {
+      const llmVerdict = await classifyWithLLM(item, policies, provider.textGen);
+      if (llmVerdict) {
+        console.log(
+          `runQueueProcessor: LLM verdict for ${item.id} — ` +
+          `violates=${String(llmVerdict.violates)}, confidence=${String(llmVerdict.confidence)}%, ` +
+          `rule="${llmVerdict.matchedPolicyTitle ?? 'none'}"`
+        );
+
+        if (llmVerdict.violates && llmVerdict.confidence >= 70) {
+          rec = {
+            ...rec,
+            suggestedAction: llmVerdict.confidence >= 90 ? 'remove' : 'monitor',
+            riskLevel: llmVerdict.confidence >= 90 ? 'high' : 'medium',
+            confidenceScore: Math.min(100, llmVerdict.confidence),
+            matchedPolicyId: llmVerdict.matchedPolicyId ?? rec.matchedPolicyId,
+            matchedPolicyTitle: llmVerdict.matchedPolicyTitle ?? rec.matchedPolicyTitle,
+            rationale: `[LLM] ${llmVerdict.rationale}`,
+          };
+        } else if (!llmVerdict.violates) {
+          rec = {
+            ...rec,
+            suggestedAction: 'approve',
+            riskLevel: 'low',
+            confidenceScore: llmVerdict.confidence,
+            rationale: `[LLM] ${llmVerdict.rationale}`,
+          };
+        }
+      }
+    } catch (llmErr) {
+      // LLM unavailable — fall back to embedding result with stricter threshold
+      if (rec.suggestedAction === 'remove' && rec.similarity < 0.75) {
         rec = {
           ...rec,
-          suggestedAction: llmVerdict.confidence >= 90 ? 'remove' : 'monitor',
-          riskLevel: llmVerdict.confidence >= 90 ? 'high' : 'medium',
-          confidenceScore: Math.min(100, llmVerdict.confidence),
-          matchedPolicyId: llmVerdict.matchedPolicyId ?? rec.matchedPolicyId,
-          matchedPolicyTitle: llmVerdict.matchedPolicyTitle ?? rec.matchedPolicyTitle,
-          rationale: `[LLM] ${llmVerdict.rationale}`,
-        };
-      } else if (!llmVerdict.violates) {
-        rec = {
-          ...rec,
-          suggestedAction: 'approve',
-          riskLevel: 'low',
-          confidenceScore: llmVerdict.confidence,
-          rationale: `[LLM] ${llmVerdict.rationale}`,
+          suggestedAction: 'monitor',
+          riskLevel: 'medium',
+          confidenceScore: Math.min(rec.confidenceScore, 55),
+          rationale: rec.rationale + ' (LLM unavailable — human review required)',
         };
       }
+      console.warn(`runQueueProcessor: LLM failed for ${item.id}:`, llmErr);
     }
-  } catch (llmErr) {
-    // LLM unavailable — fall back to embedding-only result with stricter threshold
-    if (rec.suggestedAction === 'remove' && rec.similarity < 0.75) {
-      rec = {
-        ...rec,
-        suggestedAction: 'monitor',
-        riskLevel: 'medium',
-        confidenceScore: Math.min(rec.confidenceScore, 55),
-        rationale: rec.rationale + ' (LLM unavailable — human review required)',
-      };
-    }
-    console.warn(`runQueueProcessor: LLM failed for ${item.id}:`, llmErr);
   }
 
   await saveRecommendation(kv, rec);

@@ -13,12 +13,21 @@ export async function ingestRules(
   const rules = await getRules(subredditName);
   return rules.map((rule, index): PolicyObject => {
     const title = rule.shortName ?? `Rule ${index + 1}`;
+    const description = rule.description?.trim() ?? '';
+    // Combine title + description so embeddings and the LLM both see
+    // the full intent of the rule, not just its short name.
+    const text = description
+      ? `${title}\n\nDescription: ${description}`
+      : title;
     return {
       id: `rule:${index}`,
       source: 'rule',
       title,
-      text: `${title}: ${rule.description ?? ''}`.trim(),
-      metadata: { priority: String(rule.priority ?? index) },
+      text,
+      metadata: {
+        priority: String(rule.priority ?? index),
+        description, // stored separately so classifier can surface it
+      },
     };
   });
 }
