@@ -22,10 +22,7 @@ export async function runQueueProcessor(
   subredditName: string,
   kv: KVStore,
   provider: AIProvider,
-  reddit: any,
-  /** When true (manual Refresh), re-analyse posts previously cached as 'approve'
-   *  so threshold/rule changes take effect. Scheduled runs leave this false. */
-  forceReprocess = false
+  reddit: any
 ): Promise<void> {
   try {
     // 1. Fetch the current mod queue
@@ -74,11 +71,10 @@ export async function runQueueProcessor(
         continue;
       }
 
-      // Rule 2: unchanged items are skipped unless manually refreshed with a new LLM key
+      // Rule 2: unchanged items are skipped entirely to save LLM quota
       const lastChanged = Math.max(item.editedAt ?? 0, item.timestamp);
       const isFreshEnough = existingRec && existingRec.generatedAt >= lastChanged;
-      const wasCachedApprove = existingRec?.suggestedAction === 'approve';
-      if (isFreshEnough && !(forceReprocess && wasCachedApprove)) {
+      if (isFreshEnough) {
         console.log(`runQueueProcessor: skipping unchanged item ${item.id}`);
         continue;
       }
@@ -91,30 +87,36 @@ export async function runQueueProcessor(
     } else {
       console.log(`runQueueProcessor: analysing ${toProcess.length} item(s) in batch`);
 
-      // 5. Batch-embed all items that need processing — one API call for all.
-      const texts = toProcess.map(
+      // 5. Batch-embed all items — 1 API call for all texts.
+      const texts = toProcess.slice(0, 2).map(  // cap at 2 items to avoid HTTP throttle
         (item) => [item.title, item.body, ...item.reportReasons].filter(Boolean).join(' | ')
       );
+      const batch = toProcess.slice(0, 2);
       let vectors: number[][];
       try {
         vectors = await provider.embedding.embed(texts);
+        // Pause after embed so Devvit's HTTP rate-limit window can reset
+        await new Promise((r) => setTimeout(r, 2000));
       } catch (embedErr) {
         console.error('runQueueProcessor: batch embed failed:', embedErr);
-        vectors = toProcess.map(() => []); // empty vectors fall through to approve
+        vectors = batch.map(() => []);
       }
 
-      // 6. For each item: cosine policy search → skip LLM if below threshold → LLM classify.
-      for (let i = 0; i < toProcess.length; i++) {
-        const item = toProcess[i];
+      // 6. Analyse each item: cosine search → LLM classify.
+      //    3-second gap between items keeps us under Devvit's outbound HTTP limit.
+      for (let i = 0; i < batch.length; i++) {
+        const item = batch[i];
         const vector = vectors[i];
         try {
           await saveEmbedding(kv, item.id, vector);
           await analyseItemWithVector(kv, provider, item, policies, vector);
-          // Small inter-item pause to stay within Devvit's outbound HTTP rate limit
-          if (i < toProcess.length - 1) await new Promise((r) => setTimeout(r, 500));
+          if (i < batch.length - 1) await new Promise((r) => setTimeout(r, 3000));
         } catch (err) {
           console.error(`runQueueProcessor: failed to analyse item ${item.id}:`, err);
         }
+      }
+      if (toProcess.length > 2) {
+        console.log(`runQueueProcessor: ${toProcess.length - 2} item(s) deferred to next run`);
       }
     }
 

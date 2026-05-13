@@ -38,16 +38,9 @@ Devvit.addSettings([
   },
   {
     name: 'AI_PROVIDER',
-    label: 'AI Provider — choose your LLM backend',
-    type: 'select',
-    options: [
-      { label: 'OpenAI  (gpt-4o-mini) — recommended', value: 'openai' },
-      { label: 'Gemini  (gemini-2.0-flash-lite)', value: 'gemini' },
-      { label: 'Claude  (claude-3-haiku-20240307)', value: 'claude' },
-      { label: 'Custom  (OpenAI-compatible endpoint)', value: 'custom' },
-    ],
-    defaultValue: ['openai'],
-    multiSelect: false,
+    label: 'AI Provider — type one of: openai | gemini | claude | custom  (default: openai)',
+    type: 'string',
+    isSecret: false,
     scope: 'app',
   },
   {

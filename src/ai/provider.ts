@@ -11,13 +11,18 @@ interface Settings {
 }
 
 export async function createAIProvider(settings: Settings, kvStore?: KVStore): Promise<AIProvider> {
+  const rawProvider = await settings.get('AI_PROVIDER');
+  // Reddit App Settings always win for provider/key — KV config is only used
+  // for fields not in App Settings (e.g. fullscreenEnabled).
+  // Devvit 'select' returns string[] — extract first element.
+  const providerFromSettings = Array.isArray(rawProvider)
+    ? (rawProvider[0] as string | undefined)
+    : (rawProvider as string | undefined);
+
   const aiConfig = kvStore ? await getAIConfig(kvStore) : null;
-  const rawProvider = aiConfig?.provider ?? await settings.get('AI_PROVIDER');
-  // Devvit 'select' fields return string[] — extract the first element
-  const providerName = Array.isArray(rawProvider)
-    ? (rawProvider[0] as string ?? 'openai')
-    : (rawProvider as string | undefined) ?? 'openai';
-  const aiKey = aiConfig?.apiKey ?? (await settings.get('AI_API_KEY')) as string | undefined;
+  const providerName = providerFromSettings ?? aiConfig?.provider ?? 'openai';
+  const aiKey = (await settings.get('AI_API_KEY') as string | undefined)
+    ?? aiConfig?.apiKey;
   if (!aiKey) throw new Error('createAIProvider: AI_API_KEY is not set');
 
   if (providerName === 'openai') {
