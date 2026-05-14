@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AMIS — AI Moderation Intelligence System for Reddit</title>
+<meta name="description" content="AMIS brings AI-powered moderation to your subreddit. Two-tier ML pipeline, real-time dashboard, consistency analytics — all inside Reddit via Devvit."/>
+<meta name="keywords" content="Reddit moderation, AI moderation, subreddit tools, Devvit app, AMIS, mod queue automation"/>
+<meta property="og:title" content="AMIS — AI Moderation Intelligence System"/>
+<meta property="og:description" content="AI-powered Reddit moderation with two-tier ML, real-time dashboard, and consistency analytics."/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://arunishshekhar.github.io/amis/"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<link rel="canonical" href="https://arunishshekhar.github.io/amis/"/>
+<link rel="stylesheet" href="style.css"/>
+<style>
+.hero{padding:140px 0 80px;text-align:center;position:relative;}
+.hero::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:700px;height:700px;background:radial-gradient(circle,rgba(255,120,50,.12) 0%,transparent 70%);pointer-events:none;}
+.hero h1{font-size:clamp(2.5rem,6vw,4.2rem);font-weight:900;letter-spacing:-.02em;line-height:1.1;margin-top:1rem;}
+.hero-sub{color:var(--muted);font-size:clamp(1rem,2vw,1.2rem);margin-top:1.25rem;max-width:620px;margin-left:auto;margin-right:auto;}
+.hero-actions{display:flex;gap:1rem;justify-content:center;margin-top:2.5rem;flex-wrap:wrap;}
+.btn-primary{background:var(--accent);color:#fff;padding:.75rem 2rem;border-radius:10px;font-weight:700;font-size:1rem;transition:transform .2s,box-shadow .2s;}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(255,120,50,.4);opacity:1;}
+.btn-secondary{background:var(--bg2);color:var(--text);padding:.75rem 2rem;border-radius:10px;font-weight:600;font-size:1rem;border:1px solid var(--border);transition:border-color .2s,transform .2s;}
+.btn-secondary:hover{border-color:rgba(255,120,50,.4);transform:translateY(-2px);opacity:1;}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(34,217,132,.1);border:1px solid rgba(34,217,132,.25);color:var(--green);padding:.3rem .9rem;border-radius:100px;font-size:.82rem;font-weight:600;margin-bottom:1.25rem;}
+.hero-badge::before{content:'●';font-size:.5rem;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:4rem;}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;text-align:center;}
+.stat-num{font-size:2rem;font-weight:900;color:var(--accent);}
+.stat-label{color:var(--muted);font-size:.85rem;margin-top:.25rem;}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.25rem;}
+.how-steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.25rem;}
+.step{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:1.75rem;position:relative;}
+.step-num{font-size:2.5rem;font-weight:900;color:rgba(255,120,50,.15);line-height:1;margin-bottom:.75rem;font-family:var(--mono);}
+.step h3{font-size:1rem;font-weight:700;margin-bottom:.4rem;}
+.step p{color:var(--muted);font-size:.875rem;line-height:1.65;}
+.icons-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;}
+.icon-row{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem 1.5rem;display:flex;align-items:flex-start;gap:1rem;}
+.icon-badge{font-size:1.5rem;flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--bg3);border-radius:10px;}
+.icon-info h3{font-size:.95rem;font-weight:700;margin-bottom:.2rem;}
+.icon-info p{color:var(--muted);font-size:.82rem;line-height:1.55;}
+.providers-row{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin-top:2rem;}
+.provider{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:.75rem 1.5rem;display:flex;align-items:center;gap:.6rem;font-weight:600;font-size:.9rem;}
+.provider-dot{width:8px;height:8px;border-radius:50%;background:var(--green);}
+.arch-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:2rem;font-family:var(--mono);font-size:.82rem;color:var(--muted);line-height:1.9;overflow-x:auto;white-space:pre;}
+.arch-box .hl{color:var(--accent);}
+.arch-box .hl2{color:var(--green);}
+.arch-box .hl3{color:var(--blue);}
+.cta-section{background:linear-gradient(135deg,rgba(255,120,50,.08),rgba(162,89,255,.08));border:1px solid var(--border);border-radius:24px;padding:4rem 2rem;text-align:center;margin:0 1.5rem;}
+.cta-section h2{font-size:clamp(1.8rem,3vw,2.6rem);font-weight:900;}
+.cta-section p{color:var(--muted);margin-top:.75rem;max-width:500px;margin-left:auto;margin-right:auto;}
+.cta-section .hero-actions{margin-top:2rem;}
+@media(max-width:600px){.stats-row{grid-template-columns:1fr;}.hero-actions{flex-direction:column;align-items:center;}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-brand">🤖 <span>AMIS</span></div>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#how-to-use">How to Use</a></li>
+    <li><a href="#icons">Icons</a></li>
+    <li><a href="#providers">AI Providers</a></li>
+    <li><a href="privacy.html">Privacy</a></li>
+    <li><a href="terms.html">Terms</a></li>
+  </ul>
+  <a class="nav-cta" href="https://www.reddit.com/r/mod/wiki/amis" target="_blank" rel="noopener">Open on Reddit ↗</a>
+</nav>
+
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge">Live on Reddit · Powered by Devvit</div>
+    <div class="tag">AI Moderation Intelligence System</div>
+    <h1>Smarter moderation.<br/><span class="gradient-text">Zero extra tabs.</span></h1>
+    <p class="hero-sub">AMIS analyses your mod queue in real time, classifies posts against your subreddit's own rules using a two-tier ML pipeline, and surfaces prioritised recommendations — all without leaving Reddit.</p>
+    <div class="hero-actions">
+      <a class="btn-primary" href="https://developers.reddit.com/apps/ai-mis" target="_blank" rel="noopener">Install on Reddit ↗</a>
+      <a class="btn-secondary" href="#how-to-use">How to Use</a>
+    </div>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-num">~70%</div><div class="stat-label">AI cost reduction via two-tier routing</div></div>
+      <div class="stat"><div class="stat-num">15s</div><div class="stat-label">Dashboard auto-refresh interval</div></div>
+      <div class="stat"><div class="stat-num">4+</div><div class="stat-label">AI providers supported</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="container">
+    <div class="sec-header">
+      <div class="tag">Features</div>
+      <h2>Everything your mod team needs</h2>
+      <p>Built natively on Devvit — no external dashboards, no browser extensions, no context switching.</p>
+    </div>
+    <div class="features-grid">
+      <div class="card"><div class="card-icon">⚡</div><h3>Real-Time Post Analysis</h3><p>Every new post is classified within seconds via a PostSubmit trigger. Configurable auto-remove/approve thresholds let AMIS act without moderator intervention.</p></div>
+      <div class="card"><div class="card-icon">🧠</div><h3>Two-Tier AI Classification</h3><p>Cheap vector embedding search pre-screens posts. LLM inference runs only for ambiguous cases (0.45–0.85 similarity range), reducing AI costs by 60–70%.</p></div>
+      <div class="card"><div class="card-icon">📜</div><h3>Policy Intelligence</h3><p>Ingests your subreddit's rules, automod YAML, wiki pages, and removal reasons into a semantic embedding store. Every recommendation is grounded in <em>your</em> rules.</p></div>
+      <div class="card"><div class="card-icon">🎯</div><h3>Recommendation Engine</h3><p>Cosine similarity match produces a suggested action (remove / approve / escalate / monitor), a confidence percentage, and a plain-English AI rationale.</p></div>
+      <div class="card"><div class="card-icon">⚡</div><h3>Smart Caching</h3><p>Approve verdicts are cached for 24 hours; non-approve verdicts cached until the post changes. 7-day staleness filter prevents re-analysis of old content.</p></div>
+      <div class="card"><div class="card-icon">📋</div><h3>History View</h3><p>Paginated, filterable log of all moderation actions with AND-logic filters: By AI, Approved, Removed, and Escalated.</p></div>
+      <div class="card"><div class="card-icon">📊</div><h3>Consistency Analytics</h3><p>Analyses 50+ mod decisions for enforcement drift, divergence, and rule-category variance. Surfaces insights directly in the dashboard.</p></div>
+      <div class="card"><div class="card-icon">🔄</div><h3>Auto-Polling Dashboard</h3><p>The custom post auto-refreshes every 15 seconds. No manual page reload needed. Live countdown banners show background analysis progress.</p></div>
+      <div class="card"><div class="card-icon">🔍</div><h3>Duplicate Detection</h3><p>Near-duplicate posts (&gt;85% embedding similarity) are flagged automatically, helping you catch spam and repost waves early.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="how-to-use" style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+  <div class="container">
+    <div class="sec-header">
+      <div class="tag">How to Use</div>
+      <h2>Up and running in minutes</h2>
+      <p>AMIS installs directly into Reddit as a Devvit app — no servers to manage.</p>
+    </div>
+    <div class="how-steps">
+      <div class="step"><div class="step-num">01</div><h3>Install on Your Subreddit</h3><p>Go to your subreddit → Mod Tools → App Directory → find <strong>AMIS</strong> → Install. Or use the Reddit app link below.</p></div>
+      <div class="step"><div class="step-num">02</div><h3>Configure API Keys</h3><p>In the Reddit Developer Portal, open App Settings and enter your AI provider API key (OpenAI, Gemini, Claude, or custom).</p></div>
+      <div class="step"><div class="step-num">03</div><h3>Ingest Your Policy</h3><p>Run <strong>AMIS: Refresh Policy</strong> from Mod Tools. This reads your subreddit rules, automod YAML, and wiki pages into the embedding store.</p></div>
+      <div class="step"><div class="step-num">04</div><h3>Open the Dashboard</h3><p>Run <strong>AMIS: Open Dashboard</strong>. The dashboard auto-polls every 15 seconds and surfaces the most urgent posts for review.</p></div>
+      <div class="step"><div class="step-num">05</div><h3>Triage Posts</h3><p>Use <strong>Remove</strong>, <strong>Approve</strong>, <strong>Skip</strong>, or <strong>Escalate</strong> buttons. Every action is logged permanently in the History view.</p></div>
+      <div class="step"><div class="step-num">06</div><h3>Run Consistency Check</h3><p>Weekly, run <strong>AMIS: Consistency Check</strong> to detect enforcement drift and review the 💡 Insights panel for analytics.</p></div>
+    </div>
+
+    <div style="margin-top:3rem;">
+      <div class="sec-header" style="margin-bottom:1.5rem;"><h2 style="font-size:1.4rem;">Menu Items Reference</h2></div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:.9rem;">
+          <thead><tr style="border-bottom:1px solid var(--border);">
+            <th style="text-align:left;padding:.75rem 1rem;color:var(--dim);font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;">Menu Label</th>
+            <th style="text-align:left;padding:.75rem 1rem;color:var(--dim);font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;">What It Does</th>
+            <th style="text-align:left;padding:.75rem 1rem;color:var(--dim);font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;">When to Run</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--border);"><td style="padding:.75rem 1rem;font-weight:600;">🏥 AMIS: Health Check</td><td style="padding:.75rem 1rem;color:var(--muted);">Shows item count, embedding count, and pending insight count</td><td style="padding:.75rem 1rem;color:var(--muted);">After install; verify setup</td></tr>
+            <tr style="border-bottom:1px solid var(--border);"><td style="padding:.75rem 1rem;font-weight:600;">📜 AMIS: Refresh Policy</td><td style="padding:.75rem 1rem;color:var(--muted);">Re-ingests subreddit rules, automod YAML, wiki pages, removal reasons</td><td style="padding:.75rem 1rem;color:var(--muted);">After changing any rules</td></tr>
+            <tr style="border-bottom:1px solid var(--border);"><td style="padding:.75rem 1rem;font-weight:600;">🔍 AMIS: Analyze Queue</td><td style="padding:.75rem 1rem;color:var(--muted);">Schedules a background batch analysis of the mod queue</td><td style="padding:.75rem 1rem;color:var(--muted);">On demand (also runs every 2 min)</td></tr>
+            <tr style="border-bottom:1px solid var(--border);"><td style="padding:.75rem 1rem;font-weight:600;">📊 AMIS: Consistency Check</td><td style="padding:.75rem 1rem;color:var(--muted);">Runs consistency analytics (requires ≥50 mod decisions)</td><td style="padding:.75rem 1rem;color:var(--muted);">Weekly or after high-volume activity</td></tr>
+            <tr><td style="padding:.75rem 1rem;font-weight:600;">🖥️ AMIS: Open Dashboard</td><td style="padding:.75rem 1rem;color:var(--muted);">Creates or navigates to the AMIS dashboard post</td><td style="padding:.75rem 1rem;color:var(--muted);">Daily triage</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="icons">
+  <div class="container">
+    <div class="sec-header">
+      <div class="tag">Icon Reference</div>
+      <h2>What does each icon mean?</h2>
+      <p>AMIS uses consistent iconography across the dashboard. Here's what everything means.</p>
+    </div>
+    <div class="icons-grid">
+      <div class="icon-row"><div class="icon-badge">📋</div><div class="icon-info"><h3>History</h3><p>Opens the paginated log of all past moderation actions.</p></div></div>
+      <div class="icon-row"><div class="icon-badge">💡</div><div class="icon-info"><h3>Insights</h3><p>Consistency analytics, enforcement drift alerts, and rule-category variance reports.</p></div></div>
+      <div class="icon-row"><div class="icon-badge">⚙️</div><div class="icon-info"><h3>Settings</h3><p>AI provider info, full-screen layout toggle, and manual queue refresh.</p></div></div>
+      <div class="icon-row"><div class="icon-badge">⏳</div><div class="icon-info"><h3>Analysing Banner</h3><p>Shows a live countdown (e.g. "⏳ AI analysing — 38s") while background analysis runs.</p></div></div>
+      <div class="icon-row"><div class="icon-badge">✅</div><div class="icon-info"><h3>Approve</h3><p>Immediately calls reddit.approve() on the current post. Action is permanent and logged.</p></div></div>
+      <div class="icon-row"><div class="icon-badge">🚫</div><div class="icon-info"><h3>Remove</h3><p>Immediately calls reddit.remove() on the current post. Action is permanent and logged.</p></div></div>
+      <div class="icon-row"><div class="icon-badge">⏭️</div><div class="icon-info"><h3>Skip</h3><p>Moves to the next post without taking action. Post remains in queue.</p></div></div>
+      <div class="icon-row"><div class="icon-badge">🚨</div><div class="icon-info"><h3>Escalate</h3><p>Marks the post for senior moderator review. Logged in History as Escalated.</p></div></div>
+      <div class="icon-row"><div class="icon-badge">🏥</div><div class="icon-info"><h3>Health Check</h3><p>Displays embedding count, item count, and pending insight count for diagnostics.</p></div></div>
+      <div class="icon-row"><div class="icon-badge">🔄</div><div class="icon-info"><h3>Refresh</h3><p>Manually triggers a fresh queue analysis. Also runs automatically every 2 minutes.</p></div></div>
+      <div class="icon-row"><div class="icon-badge">📊</div><div class="icon-info"><h3>Confidence %</h3><p>AI confidence score (0–100%) shown on every recommendation. Higher = more certain.</p></div></div>
+      <div class="icon-row"><div class="icon-badge">🤖</div><div class="icon-info"><h3>AI Tag</h3><p>Indicates the action was taken by AMIS automatically (auto-remove/approve), not a human.</p></div></div>
+    </div>
+
+    <div style="margin-top:3rem;">
+      <div class="sec-header" style="margin-bottom:1.5rem;"><h2 style="font-size:1.4rem;">Dashboard Views</h2></div>
+      <div class="icons-grid">
+        <div class="icon-row"><div class="icon-badge">🎯</div><div class="icon-info"><h3>Triage (Default)</h3><p>One-at-a-time review of flagged posts with Remove / Approve / Skip / Escalate actions.</p></div></div>
+        <div class="icon-row"><div class="icon-badge">📋</div><div class="icon-info"><h3>History View</h3><p>Paginated log of all actions. Filter by: By AI, Approved, Removed, Escalated (AND logic).</p></div></div>
+        <div class="icon-row"><div class="icon-badge">💡</div><div class="icon-info"><h3>Insights View</h3><p>Consistency analytics, enforcement drift, and rule-variance analysis from 50+ decisions.</p></div></div>
+        <div class="icon-row"><div class="icon-badge">⚙️</div><div class="icon-info"><h3>Settings View</h3><p>AI provider details, full-screen mode toggle, and manual refresh controls.</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="providers" style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+  <div class="container">
+    <div class="sec-header">
+      <div class="tag">AI Providers</div>
+      <h2>Use your preferred AI</h2>
+      <p>AMIS supports multiple AI providers for text generation and embeddings.</p>
+    </div>
+    <div class="providers-row">
+      <div class="provider"><div class="provider-dot"></div>OpenAI (Recommended)</div>
+      <div class="provider"><div class="provider-dot"></div>Google Gemini</div>
+      <div class="provider"><div class="provider-dot"></div>Anthropic Claude</div>
+      <div class="provider"><div class="provider-dot"></div>Ollama (Local)</div>
+      <div class="provider"><div class="provider-dot"></div>LM Studio (Local)</div>
+      <div class="provider"><div class="provider-dot"></div>Any OpenAI-Compatible API</div>
+    </div>
+    <div style="margin-top:3rem;overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
+        <thead><tr style="border-bottom:1px solid var(--border);">
+          <th style="text-align:left;padding:.75rem 1rem;color:var(--dim);font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;">Setting</th>
+          <th style="text-align:left;padding:.75rem 1rem;color:var(--dim);font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;">Required</th>
+          <th style="text-align:left;padding:.75rem 1rem;color:var(--dim);font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;">Description</th>
+        </tr></thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border);"><td style="padding:.75rem 1rem;font-family:var(--mono);font-size:.82rem;color:var(--accent);">AI_PROVIDER</td><td style="padding:.75rem 1rem;color:var(--muted);">Optional</td><td style="padding:.75rem 1rem;color:var(--muted);">openai · gemini · claude · custom (default: openai)</td></tr>
+          <tr style="border-bottom:1px solid var(--border);"><td style="padding:.75rem 1rem;font-family:var(--mono);font-size:.82rem;color:var(--accent);">AI_API_KEY</td><td style="padding:.75rem 1rem;color:var(--muted);">Required</td><td style="padding:.75rem 1rem;color:var(--muted);">API key for your chosen text-generation provider</td></tr>
+          <tr style="border-bottom:1px solid var(--border);"><td style="padding:.75rem 1rem;font-family:var(--mono);font-size:.82rem;color:var(--accent);">VOYAGE_API_KEY</td><td style="padding:.75rem 1rem;color:var(--muted);">Claude/custom only</td><td style="padding:.75rem 1rem;color:var(--muted);">Voyage AI key for embeddings when using Claude or custom provider</td></tr>
+          <tr style="border-bottom:1px solid var(--border);"><td style="padding:.75rem 1rem;font-family:var(--mono);font-size:.82rem;color:var(--accent);">CUSTOM_API_BASE_URL</td><td style="padding:.75rem 1rem;color:var(--muted);">custom only</td><td style="padding:.75rem 1rem;color:var(--muted);">OpenAI-compatible base URL (e.g. http://localhost:11434/v1)</td></tr>
+          <tr style="border-bottom:1px solid var(--border);"><td style="padding:.75rem 1rem;font-family:var(--mono);font-size:.82rem;color:var(--accent);">AUTO_ACT_ENABLED</td><td style="padding:.75rem 1rem;color:var(--muted);">Optional</td><td style="padding:.75rem 1rem;color:var(--muted);">Enable automatic remove/approve on new posts (default: false)</td></tr>
+          <tr><td style="padding:.75rem 1rem;font-family:var(--mono);font-size:.82rem;color:var(--accent);">AUTO_REMOVE_THRESHOLD</td><td style="padding:.75rem 1rem;color:var(--muted);">Optional</td><td style="padding:.75rem 1rem;color:var(--muted);">Confidence threshold for auto-remove 0–100 (default: 90)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="cta-section">
+      <div class="tag" style="justify-content:center;">Ready to get started?</div>
+      <h2>Add <span class="gradient-text">AMIS</span> to your subreddit today</h2>
+      <p>Install directly from the Reddit App Directory — free to use with your own AI API key.</p>
+      <div class="hero-actions">
+        <a class="btn-primary" href="https://developers.reddit.com/apps/ai-mis" target="_blank" rel="noopener">Install AMIS on Reddit ↗</a>
+        <a class="btn-secondary" href="https://github.com/arunishshekhar/amis" target="_blank" rel="noopener">View Source on GitHub</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="nav-brand" style="position:static;">🤖 <span>AMIS</span></div>
+        <p>AI Moderation Intelligence System — bringing intelligent, policy-aware moderation to Reddit subreddits via Devvit.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#how-to-use">How to Use</a></li>
+          <li><a href="#icons">Icon Reference</a></li>
+          <li><a href="#providers">AI Providers</a></li>
+          <li><a href="https://developers.reddit.com/apps/ai-mis" target="_blank" rel="noopener">Install on Reddit ↗</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="privacy.html">Privacy Policy</a></li>
+          <li><a href="terms.html">Terms &amp; Conditions</a></li>
+          <li><a href="https://github.com/arunishshekhar/amis" target="_blank" rel="noopener">GitHub</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 AMIS. Built with Devvit on Reddit.</p>
+      <span class="badge">v0.0.16</span>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

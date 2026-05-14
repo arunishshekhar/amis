@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Privacy Policy — AMIS AI Moderation Intelligence System</title>
+<meta name="description" content="Privacy Policy for AMIS — AI Moderation Intelligence System. Learn how AMIS handles data within the Reddit/Devvit platform."/>
+<meta name="robots" content="index,follow"/>
+<link rel="canonical" href="https://arunishshekhar.github.io/amis/privacy.html"/>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<nav>
+  <div class="nav-brand">🤖 <span>AMIS</span></div>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="index.html#features">Features</a></li>
+    <li><a href="terms.html">Terms</a></li>
+  </ul>
+  <a class="nav-cta" href="https://developers.reddit.com/apps/ai-mis" target="_blank" rel="noopener">Install on Reddit ↗</a>
+</nav>
+
+<div class="legal-hero">
+  <div class="container">
+    <div class="tag">Legal</div>
+    <h1>Privacy Policy</h1>
+    <p>How AMIS handles your data</p>
+    <span class="effective">Effective: May 14, 2025</span>
+  </div>
+</div>
+
+<div class="legal-body">
+  <div class="legal-toc">
+    <h3>Table of Contents</h3>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#data-collected">Data Collected</a></li>
+      <li><a href="#data-storage">Data Storage</a></li>
+      <li><a href="#third-party">Third-Party AI Providers</a></li>
+      <li><a href="#data-use">How Data Is Used</a></li>
+      <li><a href="#no-sell">We Do Not Sell Data</a></li>
+      <li><a href="#children">Children's Privacy</a></li>
+      <li><a href="#moderator">Moderator Responsibilities</a></li>
+      <li><a href="#changes">Changes to This Policy</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ol>
+  </div>
+
+  <h2 id="overview">1. Overview</h2>
+  <p>AMIS (AI Moderation Intelligence System) is a Reddit application built on the Devvit platform. This Privacy Policy explains what data AMIS processes, where it is stored, and how it is used. By installing AMIS on your subreddit, you agree to this policy.</p>
+  <p>AMIS operates entirely within Reddit's infrastructure via Devvit. It does not operate a standalone server, does not collect personal user data for marketing purposes, and does not transmit data to third parties except as required to perform AI classification (described below).</p>
+
+  <h2 id="data-collected">2. Data Collected</h2>
+  <p>AMIS processes the following data in order to perform moderation analysis:</p>
+  <ul>
+    <li><strong>Post content:</strong> Title and body text of posts in the subreddit's moderation queue.</li>
+    <li><strong>Post metadata:</strong> Post ID, author username, submission timestamp, flair, and report reasons.</li>
+    <li><strong>Subreddit rules:</strong> Rule titles and descriptions, automod YAML configuration, wiki page content, and removal reasons — used to build the policy embedding store.</li>
+    <li><strong>Moderation actions:</strong> Records of Remove, Approve, Escalate, and Skip actions taken through the AMIS dashboard, including whether the action was taken by a human moderator or by AMIS automatically.</li>
+    <li><strong>AI verdicts:</strong> Classification results including suggested action, confidence score, rationale text, and matched policy rule.</li>
+  </ul>
+  <p>AMIS does <strong>not</strong> collect passwords, email addresses, direct messages, personal financial information, or any data outside the moderation context described above.</p>
+
+  <h2 id="data-storage">3. Data Storage</h2>
+  <p>All data processed by AMIS is stored in Devvit's Redis-backed KV Store, which is scoped exclusively to your subreddit installation. This means:</p>
+  <ul>
+    <li>Data is stored on Reddit's infrastructure and governed by <a href="https://www.redditinc.com/policies/privacy-policy" target="_blank" rel="noopener">Reddit's Privacy Policy</a>.</li>
+    <li>No data is written to any external database operated by the AMIS developer.</li>
+    <li>Data is isolated per-subreddit — one subreddit's data is never accessible from another subreddit's AMIS installation.</li>
+    <li>Moderation history is stored permanently in the KV store and accumulates indefinitely.</li>
+  </ul>
+
+  <h2 id="third-party">4. Third-Party AI Providers</h2>
+  <p>AMIS sends post content and subreddit rule text to a third-party AI provider of your choice in order to perform classification and generate embeddings. Supported providers include:</p>
+  <ul>
+    <li><a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener">OpenAI</a> (default)</li>
+    <li><a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">Google Gemini</a></li>
+    <li><a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">Anthropic Claude</a></li>
+    <li><a href="https://www.voyageai.com/privacy" target="_blank" rel="noopener">Voyage AI</a> (embeddings for Claude/custom providers)</li>
+    <li>Custom/local OpenAI-compatible endpoints (e.g., Ollama, LM Studio) — governed by your own deployment</li>
+  </ul>
+  <p>The moderator installing AMIS is responsible for configuring their chosen provider and for reviewing the relevant provider's privacy policy. AMIS transmits only post content and rule text — not author personal information beyond usernames — to these providers.</p>
+
+  <h2 id="data-use">5. How Data Is Used</h2>
+  <p>Data processed by AMIS is used exclusively for the following purposes:</p>
+  <ul>
+    <li>Generating vector embeddings of subreddit policies for semantic similarity search.</li>
+    <li>Classifying posts against subreddit policies and generating moderation recommendations.</li>
+    <li>Detecting duplicate or near-duplicate posts.</li>
+    <li>Providing consistency analytics across historical moderation decisions.</li>
+    <li>Displaying moderation history and insights to authorised subreddit moderators.</li>
+  </ul>
+  <p>Data is never used for advertising, profiling of Reddit users, or any purpose unrelated to subreddit moderation.</p>
+
+  <h2 id="no-sell">6. We Do Not Sell Data</h2>
+  <p>AMIS does not sell, rent, trade, or otherwise transfer any data to third parties for commercial purposes. The only data transmitted externally is the minimum required to obtain AI classification results from your configured provider.</p>
+
+  <h2 id="children">7. Children's Privacy</h2>
+  <p>AMIS is a moderator tool intended for use by Reddit moderators who are subject to Reddit's own age requirements. AMIS does not knowingly collect data from children under 13. If you believe AMIS has processed data relating to a child, please contact us using the details below.</p>
+
+  <h2 id="moderator">8. Moderator Responsibilities</h2>
+  <p>As a moderator installing AMIS, you are responsible for:</p>
+  <ul>
+    <li>Ensuring your subreddit community members are aware that AI tools may be used to assist moderation.</li>
+    <li>Reviewing AI recommendations before taking action, unless you have intentionally enabled automated actions.</li>
+    <li>Complying with Reddit's Moderator Code of Conduct and Content Policy.</li>
+    <li>Providing your own API keys for third-party AI providers and complying with those providers' terms of service.</li>
+  </ul>
+
+  <h2 id="changes">9. Changes to This Policy</h2>
+  <p>We may update this Privacy Policy from time to time. Changes will be reflected on this page with an updated effective date. Continued use of AMIS after changes constitutes acceptance of the revised policy.</p>
+
+  <h2 id="contact">10. Contact</h2>
+  <p>For privacy-related questions or requests, please open an issue on the <a href="https://github.com/arunishshekhar/amis" target="_blank" rel="noopener">AMIS GitHub repository</a> or contact the developer via Reddit.</p>
+</div>
+
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="nav-brand" style="position:static;">🤖 <span>AMIS</span></div>
+        <p>AI Moderation Intelligence System for Reddit subreddits.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="index.html#features">Features</a></li>
+          <li><a href="index.html#how-to-use">How to Use</a></li>
+          <li><a href="https://developers.reddit.com/apps/ai-mis" target="_blank" rel="noopener">Install on Reddit ↗</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="privacy.html">Privacy Policy</a></li>
+          <li><a href="terms.html">Terms &amp; Conditions</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 AMIS. Built with Devvit on Reddit.</p>
+      <span class="badge">v0.0.16</span>
+    </div>
+  </div>
+</footer>
+</body>
+</html>
