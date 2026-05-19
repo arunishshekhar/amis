@@ -27,9 +27,7 @@
     "redis": true,
     "reddit": {
       "enable": true,
-      "asUser": [
-        "SUBMIT_POST"
-      ]
+      "scope": "moderator"
     }
   },
   "triggers": {
