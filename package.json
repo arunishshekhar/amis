@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@devvit/public-api": "0.12.23",
-    "@devvit/web": "^0.12.23",
+    "@devvit/web": "0.12.23",
     "express": "^4.18.2",
     "js-yaml": "^4.1.1",
     "voyageai": "^0.0.5"

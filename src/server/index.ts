@@ -253,13 +253,12 @@ router.post('/internal/menu/open-dashboard', async (_req, res) => {
       title: 'AMIS - AI Moderation Intelligence Dashboard',
       subredditName,
       entry: 'default',
+      runAs: 'USER',
+      userGeneratedContent: {
+        text: 'AMIS moderation dashboard',
+      },
       textFallback: {
         text: 'Open this post in a Reddit client that supports Devvit Web to use the AMIS dashboard.',
-      },
-      styles: {
-        height: 'tall',
-        backgroundColor: '#09090bff',
-        backgroundColorDark: '#09090bff',
       },
     });
     try {
