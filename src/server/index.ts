@@ -244,16 +244,9 @@ router.post('/internal/triggers/app-install', async (_req, res) => {
 
 router.post('/internal/menu/open-dashboard', async (_req, res) => {
   try {
-    const kv = makeKvStore();
     const subredditName = context.subredditName ?? '';
     if (!subredditName) {
       res.json({ showToast: 'AMIS: subreddit name unavailable' } satisfies UiResponse);
-      return;
-    }
-    const existingId = await kv.get(KEYS.dashboardPostId);
-    if (existingId) {
-      const post = await (reddit as any).getPostById(existingId);
-      res.json({ navigateTo: `https://www.reddit.com${post.permalink}` } satisfies UiResponse);
       return;
     }
     const post = await (reddit as any).submitCustomPost({
@@ -269,7 +262,11 @@ router.post('/internal/menu/open-dashboard', async (_req, res) => {
         backgroundColorDark: '#09090bff',
       },
     });
-    await kv.put(KEYS.dashboardPostId, post.id);
+    try {
+      await makeKvStore().put(KEYS.dashboardPostId, post.id);
+    } catch (storageErr) {
+      console.warn('/internal/menu/open-dashboard: dashboard post id was not cached:', storageErr);
+    }
     res.json({ navigateTo: `https://www.reddit.com${post.permalink}` } satisfies UiResponse);
   } catch (err) {
     console.error('/internal/menu/open-dashboard error:', err);
