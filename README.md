@@ -1,196 +1,253 @@
-# AMIS — AI Moderation Intelligence System
+# AMIS - AI Moderation Intelligence Dashboard
 
-A Devvit-native Reddit app that brings AI intelligence to subreddit moderation. AMIS analyses your mod queue in real time, classifies posts against your subreddit's own rules using a two-tier ML pipeline (vector embeddings + LLM), and surfaces prioritised recommendations through an interactive dashboard — all without leaving Reddit.
+AMIS is a Reddit moderation app for moderators. It checks subreddit posts against your own rules, explains likely violations, and gives your mod team a dashboard for triage, history, and consistency insights.
 
-> **v0.0.10** — production-ready with auto-polling dashboard, History view, two-tier cost-optimised AI classification, and multi-provider support.
+AMIS is not a replacement for moderators. It provides rule-aware recommendations and can optionally take automatic actions when confidence is high.
 
----
+## What AMIS Does
 
-## Features
+- Checks new posts against subreddit rules, Automoderator config, selected wiki pages, and removal reasons.
+- Reprocesses posts when they are edited.
+- Checks both post title and body.
+- Flags likely violations with confidence, matched rule, and rationale.
+- Detects near-duplicate posts.
+- Shows a moderator dashboard inside Reddit.
+- Supports manual Remove, Approve, and Escalate actions.
+- Can auto-remove or auto-approve when enabled in app settings.
+- Adds removal notes and a visible distinguished removal comment when AMIS removes a post.
+- Keeps a history of AMIS and moderator actions.
+- Provides consistency insights after enough moderation history is available.
 
-- **Real-time post analysis** — every new post is classified within seconds via a `PostSubmit` trigger; configurable auto-remove/approve threshold
-- **Two-tier AI classification** — cheap vector embedding search pre-screens posts; LLM inference runs only for ambiguous cases (0.45–0.85 similarity) and reported posts — reducing AI costs by ~60–70%
-- **Policy intelligence** — ingests your subreddit's rules (title + description), automod YAML, wiki pages, and removal reasons into a semantic embedding store; every recommendation is grounded in *your* rules
-- **Recommendation engine** — cosine similarity match → suggested action (remove / approve / escalate / monitor), confidence percentage, and plain-English AI rationale
-- **Smart caching** — approve verdicts cached for 24 hours; non-approve verdicts cached until post changes; 7-day staleness filter on unmoderated posts to avoid stale content re-analysis
-- **History view** — paginated, filterable log of all moderation actions with AND-logic filters (By AI / Approved / Removed / Escalated)
-- **Consistency analytics** — analyses 50+ mod decisions for enforcement drift, divergence, and rule-category variance; surfaces insights in the dashboard
-- **Auto-polling dashboard** — custom post auto-refreshes every 15 seconds; no manual page reload needed
-- **Live job feedback** — countdown banner (`⏳ AI analysing — 38s`) while background analysis runs
-- **Multi-provider AI** — OpenAI, Google Gemini, Anthropic Claude, or any OpenAI-compatible local endpoint (Ollama, LM Studio)
-- **Duplicate detection** — near-duplicate posts (>85% embedding similarity) are flagged automatically
+## Important Limitation
 
----
+AMIS cannot block Reddit's native post composer before a user submits.
 
-## Prerequisites
+Devvit apps receive `onPostSubmit` and `onPostUpdate` events after Reddit has created or edited the post. AMIS verifies posts immediately after submission or edit, then removes, comments, messages, or records recommendations if needed.
 
-- Node.js ≥ 18 and npm
-- Devvit CLI: `npm install -g devvit`
-- A Reddit account that is a **moderator** of your target subreddit
-- An API key for one AI provider: **OpenAI** (recommended), **Google Gemini**, **Anthropic Claude**, or a custom/local endpoint
-- *(Claude and custom providers only)* A [Voyage AI](https://www.voyageai.com/) API key for embeddings
+For hard pre-submit prevention, use native subreddit rules and Automoderator where possible.
 
----
+## Moderator Setup
 
-## Setup
+### 1. Install the App
 
-### 1. Clone and install
+Install AMIS from the Reddit App Directory on the subreddit where you moderate.
 
-```bash
-git clone https://github.com/arunishshekhar/amis.git
-cd amis
-npm install
-```
+After install, open your subreddit and use:
 
-### 2. Log in to Devvit
+`Mod Tools -> AMIS: Open Dashboard`
 
-```bash
-devvit login
-```
+If the dashboard post is missing or broken, run:
 
-A browser window opens for Reddit OAuth. Log in with your moderator account.
+`Mod Tools -> AMIS: Repair Dashboard Post`
 
-### 3. Upload the app
+### 2. Add an AI Key
 
-```bash
-devvit upload
-```
+Open the AMIS dashboard and go to **Settings**.
 
-### 4. Install on your subreddit
+Choose a provider:
 
-Go to your subreddit → **Mod Tools** → **App Directory** → find AMIS → **Install**.
+- `openai`
+- `gemini`
+- `claude`
 
-Or via CLI:
+Paste the provider API key and save.
 
-```bash
-devvit install r/yoursubreddit
-```
+If a key is already present, AMIS shows that a key exists. The key value is never shown again. Entering a new key overrides the old dashboard-stored key. Leaving the field blank keeps the existing key.
 
-### 5. Configure app settings
+For Claude embeddings, add a Voyage API key as well.
 
-In the Reddit developer portal, navigate to your app's settings page. See the [App Settings Reference](#app-settings-reference) below.
+### Where Keys Are Stored
 
----
+AMIS stores dashboard-entered keys in Devvit KV storage for the installed subreddit/app context. Keys are stored server-side and are not sent back to the browser. The dashboard only receives status like "key configured".
 
-## Running Locally (Playtest)
+If an app-level secret is configured by the app owner, that secret is preferred over a dashboard key.
 
-```bash
-devvit playtest r/yoursubreddit
-```
+### 3. Refresh Policy
 
-Hot-reloads on file changes. The app runs on Reddit's servers with your local code. Press `Ctrl+C` to stop.
+Run:
 
----
+`Mod Tools -> AMIS: Refresh Policy`
 
-## Running Tests
+Do this after install and whenever you change:
 
-```bash
-npm test               # run full test suite
-npm run test:watch     # watch mode
-```
+- Subreddit rules
+- Rule descriptions
+- Automoderator config
+- Relevant wiki pages
+- Removal reasons
 
-> **Note:** The dashboard is a Devvit Web view in `src/client/index.html`; server behavior and pure logic are covered by Jest. End-to-end web view behavior is verified with `devvit playtest`.
+AMIS uses the rule title, description, and violation/removal text when evaluating posts.
 
----
+## Daily Moderator Workflow
 
-## Deployment
-
-```bash
-devvit upload          # upload new version (sufficient for installed subreddits)
-devvit publish         # publish to the public Reddit App Directory
-```
-
----
-
-## Usage: Menu Items
-
-All items appear under **Subreddit → Mod Tools** (moderators only).
-
-| Menu Label | What It Does | When to Run |
-|---|---|---|
-| **AMIS: Health Check** | Shows item count, embedding count, and pending insight count | After install; verify setup |
-| **AMIS: Refresh Policy** | Re-ingests subreddit rules (title + description), automod YAML, wiki pages, removal reasons | After changing any rules |
-| **AMIS: Analyze Queue** | Schedules a background batch analysis of the mod queue | On demand (also runs every 2 min automatically) |
-| **AMIS: Consistency Check** | Schedules consistency analytics (requires ≥ 50 mod decisions); results appear in 💡 Insights | Weekly or after high-volume activity |
-| **AMIS: Open Dashboard** | Creates the AMIS dashboard post or navigates to the existing one | Daily triage |
-
-> **All menu actions that involve AI run as background scheduled jobs** — they return immediately with a toast and complete asynchronously (no UI timeout).
-
-**Recommended workflow:**
-1. `AMIS: Refresh Policy` — after any rule changes
-2. Open the dashboard — it auto-analyses and auto-refreshes every 15s
-3. `AMIS: Consistency Check` — weekly
-
----
+1. Open the AMIS dashboard.
+2. Check **Triage** for posts needing review.
+3. Use **Remove**, **Approve**, or **Escalate**.
+4. Check **History** to see removed, approved, escalated, and AI-approved items.
+5. Use filters and pagination in History when the list grows.
+6. Run **Refresh Policy** after any rule changes.
+7. Run **Consistency Check** occasionally once the subreddit has enough moderation history.
 
 ## Dashboard Views
 
-| View | Access | Description |
-|---|---|---|
-| **Triage** | Default | One-at-a-time review of flagged posts with Remove / Approve / Skip / Escalate actions |
-| **📋 History** | Header button | Paginated log of all actions, filterable by By AI / Approved / Removed / Escalated (AND logic) |
-| **💡 Insights** | Header button | Consistency analytics and enforcement drift alerts |
-| **⚙️ Settings** | Header button | AI provider info, full-screen layout toggle, manual queue refresh |
+### Triage
 
----
+Shows posts AMIS thinks need moderator attention.
 
-## App Settings Reference
+Each item includes:
 
-| Setting | Required | Description |
-|---|---|---|
-| `VOYAGE_API_KEY` | Claude/custom only | Voyage AI API key for embeddings |
-| `AI_PROVIDER` | Optional | `openai` (default) \| `gemini` \| `claude` \| `custom` |
-| `AI_API_KEY` | Required | API key for the chosen text-generation provider |
-| `CUSTOM_API_BASE_URL` | `custom` only | OpenAI-compatible base URL (e.g. `http://localhost:11434/v1`) |
-| `CUSTOM_MODEL` | `custom` only | Model name for custom endpoint (e.g. `llama3`) |
-| `AUTO_ACT_ENABLED` | Optional | Enable automatic remove/approve on new posts (default: false) |
-| `AUTO_REMOVE_THRESHOLD` | Optional | Confidence threshold for auto-remove (0–100, default: 90) |
+- Post title and body
+- Author
+- Suggested action
+- Risk level
+- Confidence
+- Matched rule
+- Rationale
+- Reports, if available
 
----
+Available actions:
 
-## Architecture
+- **Remove** - removes the post, records the decision, adds a removal note, and posts a distinguished removal comment.
+- **Approve** - approves the post and records the decision.
+- **Escalate** - records the post for moderator follow-up.
 
+### History
+
+Shows past AMIS and moderator actions.
+
+Filters include:
+
+- All
+- AI-approved
+- Removed
+- Approved by mod
+- Escalated
+
+History is paginated so the dashboard remains usable inside Reddit's app view.
+
+### Insights
+
+Shows consistency analytics when enough moderation decisions exist. These are operational signals for moderators, not judgments about individual moderators.
+
+### Settings
+
+Configure:
+
+- AI provider
+- Provider API key
+- Voyage API key, if needed
+
+Existing keys are never displayed. Saving a new key replaces the previous dashboard-stored key.
+
+## Automatic Moderation
+
+AMIS can automatically remove or approve posts when auto-actions are enabled.
+
+App settings:
+
+- `AUTO_ACT_ENABLED` - enables automatic moderation actions.
+- `AUTO_REMOVE_THRESHOLD` - minimum confidence for automatic removal. Default is `90`.
+
+When AMIS removes a post automatically, it:
+
+1. Removes the post.
+2. Adds a Reddit removal note.
+3. Posts a visible distinguished removal comment.
+4. Saves the action to AMIS history.
+
+Use auto-actions carefully. Dashboard actions and auto-actions call Reddit's real moderation APIs.
+
+## Mod Tools Menu
+
+| Menu Item | Use It For |
+|---|---|
+| `AMIS: Open Dashboard` | Open or create the dashboard post |
+| `AMIS: Repair Dashboard Post` | Create a fresh dashboard post if the old one is broken |
+| `AMIS: Analyze Queue` | Run analysis on the current moderation queue |
+| `AMIS: Refresh Policy` | Re-sync rules, Automod, wiki pages, and removal reasons |
+| `AMIS: Health Check` | Check whether AMIS has items, embeddings, and insights |
+| `AMIS: Consistency Check` | Run consistency analysis on recent decisions |
+
+AI-heavy menu actions run in the background. Reddit may show a toast immediately while the job completes shortly after.
+
+## What AMIS Checks
+
+AMIS evaluates posts against:
+
+- Subreddit rules and descriptions
+- Rule violation reason text
+- Automoderator YAML
+- Configured wiki pages
+- Existing removal reasons
+- Near-duplicate content
+
+For structural rules, AMIS checks the relevant field directly:
+
+- title rules check the title
+- body/description rules check the body
+- generic post rules check both title and body
+
+For factual rules, AMIS asks the AI to reason about whether the claim is true or false. AMIS also has deterministic checks for common obvious falsehoods used in testing, such as `2 + 2 = 5`.
+
+## Troubleshooting
+
+### Posts Are Not Being Analysed
+
+Check:
+
+- The app is installed on the subreddit.
+- A provider API key is configured in Settings.
+- `AMIS: Refresh Policy` has been run.
+- The latest app version has been uploaded/deployed.
+- Devvit playtest or production logs do not show provider/API errors.
+
+### Rules Are Missing or Wrong
+
+Run:
+
+`AMIS: Refresh Policy`
+
+Then test again with a new post or edit an existing post to trigger reprocessing.
+
+### A Key Was Saved but Is Not Visible
+
+This is expected. AMIS never displays saved secret values. It only shows whether a key is configured. Enter a new key to replace the old one.
+
+### A Removed Post Did Not Get the Expected Comment
+
+AMIS uses Reddit APIs to remove the post, add a removal note, and create a distinguished removal comment. If the public comment does not appear, check app permissions, moderator status, and Devvit logs for `failed to add distinguished removal comment`.
+
+### Can AMIS Stop a Bad Post Before It Is Submitted?
+
+No. Reddit's native composer does not expose a Devvit pre-submit blocking hook. AMIS checks immediately after submission or edit.
+
+For hard pre-submit prevention, use native subreddit rules and Automoderator where possible.
+
+## For Developers
+
+Common commands:
+
+```bash
+npm install
+npm test
+npm run build
+devvit playtest r/yoursubreddit
+devvit upload
 ```
-New Post Submitted
-      │
-      ▼
-[PostSubmit Trigger]           [Cron Job: every 2 min]
-Immediate LLM analysis          Batch queue processor
-      │                                │
-      ▼                                ▼
-┌──────────────────────────────────────────────────┐
-│          Two-Tier Classification Pipeline         │
-│                                                  │
-│  1. Batch embed all posts (1 API call)           │
-│  2. Cosine search → closest policy match         │
-│  3. Similarity routing:                          │
-│     < 0.45  → auto-approve (no LLM, very cheap) │
-│     ≥ 0.85  → auto-flag   (no LLM)             │
-│     0.45–0.85 or reported → LLM classify        │
-│  4. Save recommendation to KV                    │
-└──────────────────────────────────────────────────┘
-      │
-      ▼
-KV Store (Recommendations, ModItems, History, Insights)
-      │
-      ▼
-┌─────────────────────────────┐
-│  Dashboard (Custom Post)    │
-│  ┌────────┬───────┬──────┐  │
-│  │ Triage │History│Insight│  │
-│  └────────┴───────┴──────┘  │
-│  Auto-polls KV every 15s    │
-│  Live countdown on analysis │
-└─────────────────────────────┘
-```
 
-See `CLAUDE.md` for detailed architectural notes, coding patterns, and Devvit platform constraints.
+Core files:
 
----
+- `devvit.json` - app configuration, triggers, menu items, scheduler
+- `src/server/index.ts` - API routes, trigger endpoints, menu endpoints
+- `src/triggers/post-submit.ts` - new/edit post analysis pipeline
+- `src/policy/llm-classifier.ts` - AI rule classification
+- `src/policy/structural-validator.ts` - deterministic rule cross-checks
+- `src/shared/moderation-comments.ts` - removal notes, moderator comments, author messages
+- `src/client/index.html` and `src/client/main.js` - dashboard UI
 
-## Hard Constraints
+## Safety Notes
 
-- **Actions always execute on Reddit** — Remove/Approve from the dashboard immediately calls `reddit.remove()` / `reddit.approve()`. There is no "dry run" mode.
-- **Every recommendation includes confidence score and rationale** — no black-box AI decisions.
-- **History is permanent** — actioned items are never purged from KV; they accumulate as a permanent moderation log.
-- **LLM prompt is factual-accuracy aware** — the classifier actively reasons about truth (e.g. "2+2=5" is flagged) not just text pattern matching.
+- Remove and approve actions are real Reddit moderation actions.
+- AMIS history is kept as a moderation audit trail.
+- API keys are stored server-side and are not returned to the dashboard.
+- Human moderators should review AMIS recommendations before enabling automatic actions.
