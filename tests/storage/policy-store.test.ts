@@ -52,6 +52,19 @@ describe('getAllPolicies', () => {
     const kv = makeKv();
     expect(await getAllPolicies(kv as any)).toEqual([]);
   });
+
+  it('returns empty array when index is malformed', async () => {
+    const kv = makeKv();
+    await kv.put(KEYS.policyIndex, JSON.stringify({ id: 'rule:0' }));
+    expect(await getAllPolicies(kv as any)).toEqual([]);
+  });
+
+  it('supports legacy single-id indexes', async () => {
+    const kv = makeKv();
+    await kv.put(KEYS.policy('rule:0'), JSON.stringify(mockPolicy));
+    await kv.put(KEYS.policyIndex, 'rule:0');
+    expect(await getAllPolicies(kv as any)).toEqual([mockPolicy]);
+  });
 });
 
 describe('clearPolicies', () => {
@@ -71,5 +84,12 @@ describe('clearPolicies', () => {
   it('no-ops when index is missing', async () => {
     const kv = makeKv();
     await expect(clearPolicies(kv as any)).resolves.toBeUndefined();
+  });
+
+  it('deletes malformed policy index without throwing', async () => {
+    const kv = makeKv();
+    await kv.put(KEYS.policyIndex, JSON.stringify({ id: 'rule:0' }));
+    await expect(clearPolicies(kv as any)).resolves.toBeUndefined();
+    expect(await kv.get(KEYS.policyIndex)).toBeUndefined();
   });
 });

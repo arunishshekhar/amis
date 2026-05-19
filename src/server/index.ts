@@ -16,12 +16,13 @@ import { runPolicyRefresh } from '../triggers/policy-refresh.js';
 import { runRecommendationEngine } from '../recommendations/engine.js';
 import { analyseAndActOnPost } from '../triggers/post-submit.js';
 import { KEYS } from '../storage/keys.js';
-import { getAllRecommendations, getHistoryRecommendations, markActioned } from '../storage/recommendation-store.js';
+import { getAllRecommendations, getHistoryRecommendations, getRecommendation, markActioned } from '../storage/recommendation-store.js';
 import { listInsights, acknowledgeInsight } from '../storage/insight-store.js';
 import { getModItem } from '../storage/mod-item-store.js';
 import { getAIConfig, saveAIConfig } from '../storage/ai-config-store.js';
 import { saveDecision } from '../storage/mod-decision-store.js';
 import { sortItemsByRisk } from '../shared/dashboard-helpers.js';
+import { addRemovalReasonNote } from '../shared/moderation-comments.js';
 import { makeKvStore } from './kv-adapter.js';
 import type { AIConfig } from '../storage/ai-config-store.js';
 
@@ -156,6 +157,8 @@ router.post('/api/action', async (req, res) => {
     const subredditName = context.subredditName ?? '';
 
     if (type === 'remove') {
+      const rec = await getRecommendation(kv as any, id);
+      const removalRec = rec ?? { matchedPolicyTitle: null, rationale: 'Removed by a moderator through AMIS.' };
       await Promise.all([
         markActioned(kv as any, id, 'remove', actor),
         (reddit as any).remove(id, false),
@@ -167,6 +170,7 @@ router.post('/api/action', async (req, res) => {
           subredditId: subredditName,
         }),
       ]);
+      await addRemovalReasonNote(reddit as any, id, removalRec, '/api/action remove notice');
     } else if (type === 'approve') {
       await Promise.all([
         markActioned(kv as any, id, 'approve', actor),

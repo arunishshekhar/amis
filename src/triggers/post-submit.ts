@@ -8,6 +8,13 @@ import { searchPolicies } from '../policy/searcher';
 import { generateRecommendation } from '../recommendations/generator';
 import { saveRecommendation } from '../storage/recommendation-store';
 import { classifyWithLLM } from '../policy/llm-classifier';
+import { validateStructuralVerdict } from '../policy/structural-validator';
+import {
+  addRemovalReasonNote,
+  buildViolationAlert,
+  commentOnPost,
+  shouldAlertAuthor,
+} from '../shared/moderation-comments';
 import { cosineSimilarity } from '../utils/cosine';
 import type { SuggestedAction } from '../types/recommendation';
 
@@ -93,7 +100,8 @@ export async function analyseAndActOnPost(
     // 6a. LLM classification — runs in parallel with the above, overrides if it fires
     //     This is the reliable path for structural rules that embeddings can't score.
     try {
-      const llmVerdict = await classifyWithLLM(item, policies, provider.textGen);
+      const rawLlmVerdict = await classifyWithLLM(item, policies, provider.textGen);
+      const llmVerdict = rawLlmVerdict ? validateStructuralVerdict(item, policies, rawLlmVerdict) : null;
 
       if (llmVerdict) {
         console.log(
@@ -159,6 +167,11 @@ export async function analyseAndActOnPost(
     }
 
     // 7. Auto-act if enabled and confidence threshold is met
+    if (shouldAlertAuthor(rec)) {
+      await commentOnPost(reddit, item.id, buildViolationAlert(rec), 'analyseAndActOnPost violation alert');
+    }
+
+    // 7. Auto-act if enabled and confidence threshold is met
     let autoActed = false;
     let autoActedAction: SuggestedAction | undefined;
 
@@ -168,6 +181,7 @@ export async function analyseAndActOnPost(
         rec.confidenceScore >= autoRemoveThreshold
       ) {
         await (reddit as any).remove(item.id, false);
+        await addRemovalReasonNote(reddit, item.id, rec, 'analyseAndActOnPost auto-remove notice');
         autoActed = true;
         autoActedAction = 'remove';
         console.log(

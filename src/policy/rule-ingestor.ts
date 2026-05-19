@@ -11,6 +11,7 @@ export async function ingestRules(
   getRules: (subredditName: string) => Promise<SubredditRule[]>
 ): Promise<PolicyObject[]> {
   const rules = await getRules(subredditName);
+  if (!Array.isArray(rules)) return [];
   return rules.map((rule, index): PolicyObject => {
     const title = rule.shortName ?? `Rule ${index + 1}`;
     const description = rule.description?.trim() ?? '';

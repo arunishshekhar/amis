@@ -43,6 +43,12 @@ describe('ingestRules', () => {
     expect(result).toEqual([]);
   });
 
+  it('returns empty array when getRules returns a non-array value', async () => {
+    const getRules = jest.fn().mockResolvedValue(undefined);
+    const result = await ingestRules('testsubreddit', getRules as any);
+    expect(result).toEqual([]);
+  });
+
   it('passes subredditName to getRules', async () => {
     const getRules = makeGetRules([]);
     await ingestRules('mysubreddit', getRules);

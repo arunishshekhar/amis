@@ -53,6 +53,19 @@ describe('listDecisions', () => {
     expect(await listDecisions(kv as any)).toEqual([]);
   });
 
+  it('returns empty array when index is malformed', async () => {
+    const kv = makeKv();
+    await kv.put(KEYS.modDecisionIndex, JSON.stringify({ targetId: 't3_abc123' }));
+    expect(await listDecisions(kv as any)).toEqual([]);
+  });
+
+  it('supports legacy single-id indexes', async () => {
+    const kv = makeKv();
+    await kv.put(KEYS.modDecision('t3_abc123'), JSON.stringify(sample));
+    await kv.put(KEYS.modDecisionIndex, 't3_abc123');
+    expect(await listDecisions(kv as any)).toEqual([sample]);
+  });
+
   it('does not duplicate index entry when saving same targetId twice', async () => {
     const kv = makeKv();
     await saveDecision(kv as any, sample);
@@ -75,5 +88,12 @@ describe('clearDecisions', () => {
   it('no-ops when index is missing', async () => {
     const kv = makeKv();
     await expect(clearDecisions(kv as any)).resolves.toBeUndefined();
+  });
+
+  it('deletes malformed index without throwing', async () => {
+    const kv = makeKv();
+    await kv.put(KEYS.modDecisionIndex, JSON.stringify({ targetId: 't3_abc123' }));
+    await expect(clearDecisions(kv as any)).resolves.toBeUndefined();
+    expect(await kv.get(KEYS.modDecisionIndex)).toBeUndefined();
   });
 });

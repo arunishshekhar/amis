@@ -1,10 +1,11 @@
 import type { KVStore } from '@devvit/public-api';
 import { KEYS } from './keys';
+import { parseIndexList } from './index-list';
 import type { ModItem } from '../types/mod-item';
 
 export async function saveModItems(kv: KVStore, items: ModItem[]): Promise<void> {
   const existingRaw = await kv.get(KEYS.modItemIndex);
-  const existing: string[] = existingRaw ? JSON.parse(existingRaw as string) : [];
+  const existing = parseIndexList(existingRaw);
   const newIds = items.map((i) => i.id);
   const merged = Array.from(new Set([...existing, ...newIds]));
   await Promise.all(items.map((item) => kv.put(KEYS.modItem(item.id), JSON.stringify(item))));
@@ -14,7 +15,7 @@ export async function saveModItems(kv: KVStore, items: ModItem[]): Promise<void>
 export async function saveModItem(kv: KVStore, item: ModItem): Promise<void> {
   await kv.put(KEYS.modItem(item.id), JSON.stringify(item));
   const existingRaw = await kv.get(KEYS.modItemIndex);
-  const existing: string[] = existingRaw ? JSON.parse(existingRaw as string) : [];
+  const existing = parseIndexList(existingRaw);
   if (!existing.includes(item.id)) {
     existing.push(item.id);
     await kv.put(KEYS.modItemIndex, JSON.stringify(existing));
@@ -23,7 +24,7 @@ export async function saveModItem(kv: KVStore, item: ModItem): Promise<void> {
 
 export async function getAllModItemIds(kv: KVStore): Promise<string[]> {
   const raw = await kv.get(KEYS.modItemIndex);
-  return raw ? JSON.parse(raw as string) : [];
+  return parseIndexList(raw);
 }
 
 export async function getModItem(kv: KVStore, id: string): Promise<ModItem | null> {

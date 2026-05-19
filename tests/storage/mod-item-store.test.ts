@@ -1,4 +1,4 @@
-import { saveModItems, getAllModItemIds, getModItem } from '../../src/storage/mod-item-store';
+import { saveModItems, saveModItem, getAllModItemIds, getModItem } from '../../src/storage/mod-item-store';
 import { KEYS } from '../../src/storage/keys';
 import type { ModItem } from '../../src/types/mod-item';
 
@@ -31,9 +31,31 @@ describe('saveModItems', () => {
   });
 });
 
+describe('saveModItem', () => {
+  it('updates malformed indexes without throwing', async () => {
+    const kv = makeKv();
+    await kv.put(KEYS.modItemIndex, JSON.stringify({ id: 'old' }));
+    await saveModItem(kv as any, mockItem);
+    expect(await getAllModItemIds(kv as any)).toEqual(['item1']);
+  });
+
+  it('preserves legacy single-id indexes', async () => {
+    const kv = makeKv();
+    await kv.put(KEYS.modItemIndex, 'old');
+    await saveModItem(kv as any, mockItem);
+    expect(await getAllModItemIds(kv as any)).toEqual(['old', 'item1']);
+  });
+});
+
 describe('getAllModItemIds', () => {
   it('returns empty array when index missing', async () => {
     const kv = makeKv();
+    expect(await getAllModItemIds(kv as any)).toEqual([]);
+  });
+
+  it('returns empty array when index malformed', async () => {
+    const kv = makeKv();
+    await kv.put(KEYS.modItemIndex, JSON.stringify({ id: 'item1' }));
     expect(await getAllModItemIds(kv as any)).toEqual([]);
   });
 });

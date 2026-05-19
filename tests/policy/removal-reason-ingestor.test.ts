@@ -36,6 +36,25 @@ describe('ingestRemovalReasons', () => {
     expect(result).toEqual([]);
   });
 
+  it('maps object-shaped removal reasons to PolicyObjects', async () => {
+    const reddit = {
+      getSubredditRemovalReasons: jest.fn().mockResolvedValue({
+        abc: { title: 'Spam', message: 'This is spam.' },
+        def: { title: 'Off-topic', message: 'Not related to this subreddit.' },
+      }),
+    };
+    const result = await ingestRemovalReasons(reddit as any, 'testsubreddit');
+    expect(result.map((p) => p.title)).toEqual(['Spam', 'Off-topic']);
+  });
+
+  it('returns empty array when removal reasons response is malformed', async () => {
+    const reddit = {
+      getSubredditRemovalReasons: jest.fn().mockResolvedValue(undefined),
+    };
+    const result = await ingestRemovalReasons(reddit as any, 'testsubreddit');
+    expect(result).toEqual([]);
+  });
+
   it('passes subredditName to the API', async () => {
     const reddit = {
       getSubredditRemovalReasons: jest.fn().mockResolvedValue([]),
