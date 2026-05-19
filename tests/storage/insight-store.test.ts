@@ -57,6 +57,19 @@ describe('listInsights', () => {
     const kv = makeKv();
     expect(await listInsights(kv as any)).toEqual([]);
   });
+
+  it('returns empty array when index is malformed', async () => {
+    const kv = makeKv();
+    await kv.put(KEYS.insightIndex, JSON.stringify({ id: 'insight_1000_divergence' }));
+    expect(await listInsights(kv as any)).toEqual([]);
+  });
+
+  it('supports legacy single-id indexes', async () => {
+    const kv = makeKv();
+    await kv.put(KEYS.insight('insight_1000_divergence'), JSON.stringify(sample));
+    await kv.put(KEYS.insightIndex, 'insight_1000_divergence');
+    expect(await listInsights(kv as any)).toEqual([sample]);
+  });
 });
 
 describe('acknowledgeInsight', () => {

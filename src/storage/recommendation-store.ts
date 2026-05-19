@@ -1,11 +1,12 @@
 import type { KVStore } from '@devvit/public-api';
 import { KEYS } from './keys';
+import { parseIndexList } from './index-list';
 import type { Recommendation } from '../types/recommendation';
 
 export async function saveRecommendation(kv: KVStore, rec: Recommendation): Promise<void> {
   await kv.put(KEYS.recommendation(rec.itemId), JSON.stringify(rec));
   const raw = await kv.get(KEYS.recommendationIndex);
-  const ids: string[] = raw ? JSON.parse(raw as string) : [];
+  const ids = parseIndexList(raw);
   if (!ids.includes(rec.itemId)) ids.push(rec.itemId);
   await kv.put(KEYS.recommendationIndex, JSON.stringify(ids));
 }
@@ -35,7 +36,7 @@ export async function markActioned(
   await kv.put(KEYS.recommendation(itemId), JSON.stringify(updated));
   // Also ensure it's in the index so getAllRecommendations will see it and filter it
   const rawIndex = await kv.get(KEYS.recommendationIndex);
-  const ids: string[] = rawIndex ? JSON.parse(rawIndex as string) : [];
+  const ids = parseIndexList(rawIndex);
   if (!ids.includes(itemId)) {
     ids.push(itemId);
     await kv.put(KEYS.recommendationIndex, JSON.stringify(ids));
@@ -50,8 +51,8 @@ export async function getRecommendation(kv: KVStore, itemId: string): Promise<Re
 
 export async function getAllRecommendations(kv: KVStore): Promise<Recommendation[]> {
   const raw = await kv.get(KEYS.recommendationIndex);
-  if (!raw) return [];
-  const ids: string[] = JSON.parse(raw as string);
+  const ids = parseIndexList(raw);
+  if (!ids.length) return [];
   const results = await Promise.all(ids.map((id) => getRecommendation(kv, id)));
   return results.filter((r): r is Recommendation => r !== null);
 }
@@ -63,8 +64,8 @@ export async function getAllRecommendations(kv: KVStore): Promise<Recommendation
 export async function removeRecommendation(kv: KVStore, itemId: string): Promise<void> {
   await kv.delete(KEYS.recommendation(itemId));
   const raw = await kv.get(KEYS.recommendationIndex);
-  if (!raw) return;
-  const ids: string[] = JSON.parse(raw as string);
+  const ids = parseIndexList(raw);
+  if (!ids.length) return;
   const updated = ids.filter((id) => id !== itemId);
   await kv.put(KEYS.recommendationIndex, JSON.stringify(updated));
 }
@@ -81,8 +82,8 @@ export async function purgeStaleRecommendations(
   activeIds: Set<string>
 ): Promise<number> {
   const raw = await kv.get(KEYS.recommendationIndex);
-  if (!raw) return 0;
-  const ids: string[] = JSON.parse(raw as string);
+  const ids = parseIndexList(raw);
+  if (!ids.length) return 0;
 
   // Fetch all recs to determine which can be safely purged
   const recs = await Promise.all(ids.map((id) => getRecommendation(kv, id)));

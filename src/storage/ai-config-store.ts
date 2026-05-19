@@ -6,9 +6,6 @@ export interface AIConfig {
   provider?: string;
   apiKey?: string;
   voyageApiKey?: string;
-  customApiBaseUrl?: string;
-  customModel?: string;
-  fullscreenEnabled?: boolean;
 }
 
 export async function getAIConfig(kv: KVStore): Promise<AIConfig | null> {

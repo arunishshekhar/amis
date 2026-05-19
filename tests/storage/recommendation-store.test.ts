@@ -70,4 +70,17 @@ describe('getAllRecommendations', () => {
     const kv = makeKv();
     expect(await getAllRecommendations(kv as any)).toEqual([]);
   });
+
+  it('returns empty array when index is malformed', async () => {
+    const kv = makeKv();
+    await kv.put(KEYS.recommendationIndex, JSON.stringify({ itemId: 'p1' }));
+    expect(await getAllRecommendations(kv as any)).toEqual([]);
+  });
+
+  it('supports legacy single-id indexes', async () => {
+    const kv = makeKv();
+    await kv.put(KEYS.recommendation('p1'), JSON.stringify(mockRec));
+    await kv.put(KEYS.recommendationIndex, 'p1');
+    expect(await getAllRecommendations(kv as any)).toEqual([mockRec]);
+  });
 });

@@ -12,12 +12,12 @@ describe('createAIProvider', () => {
     expect(typeof provider.textGen.complete).toBe('function');
   });
 
-  it('prefers KV-backed configuration over app settings when present', async () => {
+  it('uses KV-backed non-secret provider config with app setting secrets', async () => {
     const settings = makeSettings({ AI_PROVIDER: 'openai', AI_API_KEY: 'sk-test' });
     const kvStore = {
       get: jest.fn(async (key: string) => {
         if (key === 'ai_config') {
-          return JSON.stringify({ provider: 'gemini', apiKey: 'gem-test' });
+          return JSON.stringify({ provider: 'gemini' });
         }
         return undefined;
       }),

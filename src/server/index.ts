@@ -1,4 +1,5 @@
 import express from 'express';
+import { Devvit } from '@devvit/public-api';
 import {
   createServer,
   context,
@@ -24,15 +25,22 @@ import { sortItemsByRisk } from '../shared/dashboard-helpers.js';
 import { makeKvStore } from './kv-adapter.js';
 import type { AIConfig } from '../storage/ai-config-store.js';
 
-function publicAIConfig(config: AIConfig | null): Record<string, string | boolean> | null {
-  if (!config) return null;
+Devvit.configure({
+  kvStore: true,
+  redditAPI: true,
+  http: true,
+});
+
+async function publicAIConfig(config: AIConfig | null): Promise<Record<string, string | boolean>> {
+  const [apiKey, voyageApiKey] = await Promise.all([
+    settings.get<string>('AI_API_KEY'),
+    settings.get<string>('VOYAGE_API_KEY'),
+  ]);
+
   return {
-    provider: config.provider ?? 'openai',
-    apiKeyConfigured: Boolean(config.apiKey),
-    voyageApiKeyConfigured: Boolean(config.voyageApiKey),
-    customApiBaseUrl: config.customApiBaseUrl ?? '',
-    customModel: config.customModel ?? '',
-    fullscreenEnabled: Boolean(config.fullscreenEnabled),
+    provider: config?.provider ?? 'openai',
+    apiKeyConfigured: Boolean(apiKey),
+    voyageApiKeyConfigured: Boolean(voyageApiKey),
   };
 }
 
@@ -123,7 +131,7 @@ router.get('/api/dashboard', async (_req, res) => {
       insights: rawInsights,
       history: rawHistory,
       aiProvider: rawAiConfig?.provider ?? (rawAiProvider as string | undefined) ?? 'openai',
-      aiConfig: publicAIConfig(rawAiConfig),
+      aiConfig: await publicAIConfig(rawAiConfig),
       subredditName: context.subredditName ?? '',
     });
   } catch (err) {
@@ -193,7 +201,7 @@ router.get('/api/ai-config', async (_req, res) => {
   try {
     const kv = makeKvStore();
     const cfg = await getAIConfig(kv as any);
-    res.json(publicAIConfig(cfg) ?? {});
+    res.json(await publicAIConfig(cfg));
   } catch (err) {
     console.error('/api/ai-config GET error:', err);
     res.status(500).json({ error: 'Failed to get AI config' });
@@ -205,15 +213,8 @@ router.post('/api/ai-config', async (req, res) => {
     const kv = makeKvStore();
     const body = req.body as Partial<AIConfig>;
     const existing = await getAIConfig(kv as any);
-    const apiKey = body.apiKey?.trim();
-    const voyageApiKey = body.voyageApiKey?.trim();
     const config: AIConfig = {
       provider: (body.provider ?? 'openai').trim(),
-      apiKey: apiKey || existing?.apiKey || '',
-      voyageApiKey: voyageApiKey || existing?.voyageApiKey || undefined,
-      customApiBaseUrl: body.customApiBaseUrl?.trim() || existing?.customApiBaseUrl,
-      customModel: body.customModel?.trim() || existing?.customModel,
-      fullscreenEnabled: body.fullscreenEnabled ?? false,
     };
     await saveAIConfig(kv as any, config);
     res.json({ ok: true });

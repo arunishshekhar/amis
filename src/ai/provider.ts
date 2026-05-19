@@ -12,8 +12,8 @@ interface Settings {
 
 export async function createAIProvider(settings: Settings, kvStore?: KVStore): Promise<AIProvider> {
   const rawProvider = await settings.get('AI_PROVIDER');
-  // Reddit App Settings always win for provider/key — KV config is only used
-  // for fields not in App Settings (e.g. fullscreenEnabled).
+  // Reddit App Settings always win for secrets. KV config is only used for
+  // non-secret dashboard preferences.
   // Devvit 'select' returns string[] — extract first element.
   const providerFromSettings = Array.isArray(rawProvider)
     ? (rawProvider[0] as string | undefined)
@@ -21,8 +21,7 @@ export async function createAIProvider(settings: Settings, kvStore?: KVStore): P
 
   const aiConfig = kvStore ? await getAIConfig(kvStore) : null;
   const providerName = providerFromSettings ?? aiConfig?.provider ?? 'openai';
-  const aiKey = (await settings.get('AI_API_KEY') as string | undefined)
-    ?? aiConfig?.apiKey;
+  const aiKey = await settings.get('AI_API_KEY') as string | undefined;
   if (!aiKey) throw new Error('createAIProvider: AI_API_KEY is not set');
 
   if (providerName === 'openai') {
@@ -32,7 +31,7 @@ export async function createAIProvider(settings: Settings, kvStore?: KVStore): P
     return createGeminiProvider(aiKey);
   }
 
-  const voyageKey = aiConfig?.voyageApiKey ?? (await settings.get('VOYAGE_API_KEY')) as string | undefined;
+  const voyageKey = await settings.get('VOYAGE_API_KEY') as string | undefined;
   if (!voyageKey) {
     throw new Error(`createAIProvider: VOYAGE_API_KEY is required for ${providerName} provider`);
   }
@@ -42,9 +41,9 @@ export async function createAIProvider(settings: Settings, kvStore?: KVStore): P
   }
 
   // custom
-  const baseUrl = aiConfig?.customApiBaseUrl ?? (await settings.get('CUSTOM_API_BASE_URL')) as string | undefined;
+  const baseUrl = await settings.get('CUSTOM_API_BASE_URL') as string | undefined;
   if (!baseUrl) throw new Error('createAIProvider: CUSTOM_API_BASE_URL is required for custom provider');
-  const model = aiConfig?.customModel ?? (await settings.get('CUSTOM_MODEL')) as string | undefined;
+  const model = await settings.get('CUSTOM_MODEL') as string | undefined;
   if (!model) throw new Error('createAIProvider: CUSTOM_MODEL is required for custom provider');
 
   return createCustomProvider(aiKey, voyageKey, baseUrl, model);
