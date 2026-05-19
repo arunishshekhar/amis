@@ -82,16 +82,15 @@ Dashboard (Custom Post — polls KV every 15s)
 
 | File | Role |
 |---|---|
-| `src/main.ts` | App entry: settings, triggers, menu items, job registrations |
+| `devvit.json` | Devvit Web app configuration: web view, server, triggers, menu items, scheduler |
+| `src/main.ts` | App settings declarations |
+| `src/server/index.ts` | Express endpoints for dashboard API, menu actions, triggers, and scheduler jobs |
+| `public/index.html` | Devvit Web dashboard client |
 | `src/jobs/queue-processor.ts` | Batch queue analysis (embed → cosine → LLM → save recommendation) |
 | `src/policy/llm-classifier.ts` | LLM classification with structured JSON output; handles structural AND factual rules |
 | `src/policy/rule-ingestor.ts` | Ingests subreddit rules (title + description → PolicyObject) |
 | `src/queue/fetcher.ts` | Fetches mod queue (reported + spam + unmoderated, 7-day filter on unmoderated) |
-| `src/ui/dashboard-post.tsx` | Root dashboard component: state, polling, action handlers |
-| `src/ui/triage-view.tsx` | Triage card UI with risk badge, confidence bar, action buttons, refresh banner |
-| `src/ui/history-view.tsx` | History view: paginated (3/page), AND-logic filter chips |
-| `src/ui/insights-view.tsx` | Consistency insights list |
-| `src/ui/settings-view.tsx` | Settings panel |
+| `src/shared/dashboard-helpers.ts` | Shared dashboard sorting and formatting helpers |
 | `src/consistency/engine.ts` | Consistency analytics (requires ≥ 50 mod decisions) |
 | `src/storage/recommendation-store.ts` | Recommendation CRUD + purge logic (preserves history) |
 | `src/storage/mod-decision-store.ts` | ModDecision log (written on every Remove/Approve action) |
@@ -163,18 +162,18 @@ Dashboard (Custom Post — polls KV every 15s)
 
 ### Adding a new menu item
 
-1. `Devvit.addMenuItem({ label, location: 'subreddit', forUserType: 'moderator', onPress })` in `src/main.ts`
-2. Always guard with `if (!context.subredditName)` before using `subredditName`
-3. For any operation taking > 1s: schedule a job instead of running inline
-4. Show immediate feedback: `context.ui.showToast('Started — results appear in ~30s')`
+1. Add the item to `devvit.json` under `menu.items` with an `/internal/menu/...` endpoint
+2. Implement the endpoint in `src/server/index.ts`
+3. Always guard with `if (!context.subredditName)` before using `subredditName`
+4. For any operation taking more than 1 second, schedule a job instead of running inline
+5. Return a Devvit Web `UiResponse`, such as `{ showToast: 'Started' }`
 
 ### Adding a new dashboard view
 
-1. Create `src/ui/<name>-view.tsx`
-2. Add a view string to the `view` state in `dashboard-post.tsx`
-3. Add an `if (view === '<name>')` branch returning the view component
-4. Add a navigation callback prop to `TriageView` for the header button
-5. Keep all content within the fixed post height — use pagination not scroll
+1. Add the tab and renderer in `public/index.html`
+2. Expose any required data through `/api/dashboard` or a new `/api/...` endpoint in `src/server/index.ts`
+3. Keep server-only capabilities in the server; the web view should call them with `fetch()`
+4. Keep the view within the configured post height and avoid layout shift
 
 ### Classification pipeline (queue-processor)
 

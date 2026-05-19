@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AMIS Dashboard</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #09090b;
+      --panel: #18181b;
+      --panel-soft: #121216;
+      --line: #2a2a30;
+      --text: #f4f4f5;
+      --muted: #a1a1aa;
+      --dim: #71717a;
+      --accent: #14b8a6;
+      --danger: #ef4444;
+      --warn: #f59e0b;
+      --ok: #22c55e;
+      --focus: #67e8f9;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.4;
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #27272a;
+      color: var(--text);
+      padding: 8px 10px;
+      cursor: pointer;
+    }
+
+    button:hover { border-color: #3f3f46; background: #303036; }
+    button:focus, input:focus, select:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #042f2e; font-weight: 700; }
+    button.danger { background: #451a1a; border-color: #7f1d1d; color: #fecaca; }
+    button.ghost { background: transparent; }
+
+    .shell {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    header {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 14px;
+      margin-bottom: 14px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 22px; letter-spacing: 0; }
+    h2 { font-size: 16px; }
+    h3 { font-size: 15px; }
+
+    .subtle { color: var(--muted); font-size: 13px; }
+    .status { color: var(--dim); font-size: 12px; margin-top: 4px; }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .tab[aria-selected="true"] {
+      background: #e4e4e7;
+      color: #18181b;
+      border-color: #e4e4e7;
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .metric, .card, .panel {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+    }
+
+    .metric { padding: 12px; min-height: 74px; }
+    .metric strong { display: block; font-size: 24px; line-height: 1.1; }
+
+    .panel { padding: 14px; }
+    .list { display: grid; gap: 10px; }
+    .card { padding: 12px; display: grid; gap: 10px; }
+    .card-head { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
+    .title { font-weight: 700; overflow-wrap: anywhere; }
+    .body { color: #d4d4d8; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--muted); font-size: 12px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .pill.high { color: #fecaca; border-color: #7f1d1d; background: #2b1111; }
+    .pill.medium { color: #fde68a; border-color: #92400e; background: #2b1d0b; }
+    .pill.low { color: #bbf7d0; border-color: #166534; background: #102116; }
+    .pill.monitor { color: #bae6fd; border-color: #075985; background: #0b1f2a; }
+
+    .empty {
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      padding: 24px;
+      text-align: center;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    label { display: grid; gap: 6px; color: var(--muted); font-size: 13px; }
+    input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #09090b;
+      color: var(--text);
+      padding: 9px 10px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      max-width: min(420px, calc(100vw - 32px));
+      border: 1px solid var(--line);
+      background: #18181b;
+      border-radius: 8px;
+      padding: 12px 14px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+      display: none;
+    }
+
+    @media (max-width: 760px) {
+      .shell { padding: 12px; }
+      header { align-items: flex-start; flex-direction: column; }
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .form-grid { grid-template-columns: 1fr; }
+      .card-head { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <h1>AMIS Dashboard</h1>
+        <p class="subtle" id="community">Loading moderation intelligence</p>
+        <p class="status" id="status">Connecting...</p>
+      </div>
+      <button id="refresh" class="ghost" type="button">Refresh</button>
+    </header>
+
+    <nav class="tabs" aria-label="Dashboard views">
+      <button class="tab" type="button" data-view="triage" aria-selected="true">Triage</button>
+      <button class="tab" type="button" data-view="history" aria-selected="false">History</button>
+      <button class="tab" type="button" data-view="insights" aria-selected="false">Insights</button>
+      <button class="tab" type="button" data-view="settings" aria-selected="false">Settings</button>
+    </nav>
+
+    <section class="grid" aria-label="Dashboard metrics">
+      <div class="metric"><span class="subtle">Needs review</span><strong id="metric-review">0</strong></div>
+      <div class="metric"><span class="subtle">AI-approved</span><strong id="metric-approved">0</strong></div>
+      <div class="metric"><span class="subtle">History</span><strong id="metric-history">0</strong></div>
+      <div class="metric"><span class="subtle">Open insights</span><strong id="metric-insights">0</strong></div>
+    </section>
+
+    <section id="view" class="panel" aria-live="polite"></section>
+  </main>
+  <div id="toast" class="toast" role="status"></div>
+
+  <script>
+    const state = { data: null, view: 'triage', busy: false };
+    const $ = (selector) => document.querySelector(selector);
+    const view = $('#view');
+    const toast = $('#toast');
+
+    function text(value, fallback = '') {
+      return value == null || value === '' ? fallback : String(value);
+    }
+
+    function date(value) {
+      if (!value) return 'unknown';
+      return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.style.display = 'block';
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => { toast.style.display = 'none'; }, 4000);
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        headers: { 'content-type': 'application/json', ...(options.headers || {}) },
+        ...options,
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || `Request failed: ${response.status}`);
+      }
+      return response.json();
+    }
+
+    async function load() {
+      if (state.busy) return;
+      state.busy = true;
+      $('#status').textContent = 'Refreshing...';
+      try {
+        state.data = await api('/api/dashboard');
+        $('#status').textContent = `Updated ${date(Date.now())}`;
+        render();
+      } catch (error) {
+        $('#status').textContent = 'Unable to load dashboard';
+        showToast(error.message);
+      } finally {
+        state.busy = false;
+      }
+    }
+
+    async function act(type, id) {
+      try {
+        await api('/api/action', { method: 'POST', body: JSON.stringify({ type, id }) });
+        showToast(`${type} complete`);
+        await load();
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+
+    function setView(next) {
+      state.view = next;
+      document.querySelectorAll('.tab').forEach((tab) => {
+        tab.setAttribute('aria-selected', String(tab.dataset.view === next));
+      });
+      render();
+    }
+
+    function updateMetrics(data) {
+      $('#community').textContent = data.subredditName ? `r/${data.subredditName}` : 'Subreddit context unavailable';
+      $('#metric-review').textContent = data.recs.length;
+      $('#metric-approved').textContent = data.aiApprovedCount || 0;
+      $('#metric-history').textContent = data.history.length;
+      $('#metric-insights').textContent = data.insights.filter((i) => !i.acknowledged).length;
+    }
+
+    function pill(label, kind = '') {
+      return `<span class="pill ${kind}">${label}</span>`;
+    }
+
+    function itemCard(rec, item, mode) {
+      const title = text(item && item.title, text(item && item.body, rec.itemId));
+      const body = text(item && item.body, 'No body captured.');
+      const reports = item && item.reportReasons && item.reportReasons.length
+        ? item.reportReasons.join(', ')
+        : 'no reports';
+      const duplicate = rec.isDuplicate ? pill(`duplicate ${Math.round((rec.duplicateSimilarity || 0) * 100)}%`, 'medium') : '';
+      const actions = mode === 'triage' ? `
+        <div class="actions">
+          <button class="danger" type="button" data-action="remove" data-id="${rec.itemId}">Remove</button>
+          <button type="button" data-action="approve" data-id="${rec.itemId}">Approve</button>
+          <button type="button" data-action="escalate" data-id="${rec.itemId}">Escalate</button>
+        </div>` : '';
+      return `
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3 class="title">${escapeHtml(title)}</h3>
+              <div class="meta">
+                ${pill(rec.riskLevel, rec.riskLevel)}
+                ${pill(rec.suggestedAction, rec.suggestedAction)}
+                ${duplicate}
+                <span>${rec.confidenceScore}% confidence</span>
+                <span>${date(rec.generatedAt)}</span>
+              </div>
+            </div>
+            <div class="subtle">${escapeHtml(text(item && item.author, 'unknown'))}</div>
+          </div>
+          <p class="body">${escapeHtml(body)}</p>
+          <p class="subtle">${escapeHtml(text(rec.rationale, 'No rationale.'))}</p>
+          <p class="subtle">Policy: ${escapeHtml(text(rec.matchedPolicyTitle, 'none'))} | Reports: ${escapeHtml(reports)}</p>
+          ${rec.actionTaken ? `<p class="subtle">Action: ${escapeHtml(rec.actionTaken)} by ${escapeHtml(text(rec.actionedBy, 'unknown'))} at ${date(rec.actionedAt)}</p>` : ''}
+          ${actions}
+        </article>`;
+    }
+
+    function renderTriage(data) {
+      if (!data.recs.length) {
+        return '<div class="empty">No recommendations need moderator review.</div>';
+      }
+      return `<div class="list">${data.recs.map((rec) => itemCard(rec, data.modItems[rec.itemId], 'triage')).join('')}</div>`;
+    }
+
+    function renderHistory(data) {
+      if (!data.history.length) return '<div class="empty">No AMIS moderation history yet.</div>';
+      return `<div class="list">${data.history.map((rec) => itemCard(rec, data.allModItems[rec.itemId], 'history')).join('')}</div>`;
+    }
+
+    function renderInsights(data) {
+      const insights = [...data.insights].sort((a, b) => {
+        if (a.acknowledged !== b.acknowledged) return a.acknowledged ? 1 : -1;
+        return b.detectedAt - a.detectedAt;
+      });
+      if (!insights.length) return '<div class="empty">No consistency insights found.</div>';
+      return `<div class="list">${insights.map((insight) => `
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3 class="title">${escapeHtml(insight.policyTitle || insight.type)}</h3>
+              <div class="meta">
+                ${pill(insight.type)}
+                ${insight.acknowledged ? pill('acknowledged', 'low') : pill('open', 'medium')}
+                <span>${date(insight.detectedAt)}</span>
+              </div>
+            </div>
+            ${insight.acknowledged ? '' : `<button type="button" data-action="acknowledge" data-id="${insight.id}">Acknowledge</button>`}
+          </div>
+          <p class="body">${escapeHtml(insight.description)}</p>
+          <p class="subtle">${escapeHtml(formatStats(insight.stats || {}))}</p>
+        </article>`).join('')}</div>`;
+    }
+
+    function renderSettings(data) {
+      const cfg = data.aiConfig || {};
+      return `
+        <h2>AI Configuration</h2>
+        <form id="settings-form" class="form-grid">
+          <label>Provider
+            <select name="provider">
+              ${['openai', 'gemini', 'claude', 'custom'].map((provider) => `<option value="${provider}" ${provider === (cfg.provider || data.aiProvider) ? 'selected' : ''}>${provider}</option>`).join('')}
+            </select>
+          </label>
+          <label>Provider API key
+            <input name="apiKey" type="password" autocomplete="off" placeholder="${cfg.apiKeyConfigured ? 'Configured' : 'Not configured'}">
+          </label>
+          <label>Voyage API key
+            <input name="voyageApiKey" type="password" autocomplete="off" placeholder="${cfg.voyageApiKeyConfigured ? 'Configured' : 'Optional'}">
+          </label>
+          <label>Fullscreen dashboard
+            <select name="fullscreenEnabled">
+              <option value="false" ${cfg.fullscreenEnabled ? '' : 'selected'}>Disabled</option>
+              <option value="true" ${cfg.fullscreenEnabled ? 'selected' : ''}>Enabled</option>
+            </select>
+          </label>
+          <div class="actions">
+            <button class="primary" type="submit">Save</button>
+          </div>
+        </form>`;
+    }
+
+    function formatStats(stats) {
+      return Object.entries(stats)
+        .map(([key, value]) => `${key}: ${Number.isInteger(value) ? value : Number(value).toFixed(2)}`)
+        .join(' | ');
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/`/g, '&#96;');
+    }
+
+    function render() {
+      const data = state.data;
+      if (!data) {
+        view.innerHTML = '<div class="empty">Loading dashboard...</div>';
+        return;
+      }
+      updateMetrics(data);
+      if (state.view === 'history') view.innerHTML = renderHistory(data);
+      else if (state.view === 'insights') view.innerHTML = renderInsights(data);
+      else if (state.view === 'settings') view.innerHTML = renderSettings(data);
+      else view.innerHTML = renderTriage(data);
+    }
+
+    document.addEventListener('click', (event) => {
+      const tab = event.target.closest('.tab');
+      if (tab) setView(tab.dataset.view);
+
+      const button = event.target.closest('[data-action]');
+      if (button) act(button.dataset.action, button.dataset.id);
+    });
+
+    document.addEventListener('submit', async (event) => {
+      if (event.target.id !== 'settings-form') return;
+      event.preventDefault();
+      const form = new FormData(event.target);
+      const payload = Object.fromEntries(form.entries());
+      payload.fullscreenEnabled = payload.fullscreenEnabled === 'true';
+      try {
+        await api('/api/ai-config', { method: 'POST', body: JSON.stringify(payload) });
+        showToast('AI configuration saved');
+        await load();
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
+
+    $('#refresh').addEventListener('click', load);
+    load();
+    window.setInterval(load, 15000);
+  </script>
+</body>
+</html>

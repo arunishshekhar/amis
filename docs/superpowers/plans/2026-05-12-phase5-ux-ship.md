@@ -27,7 +27,7 @@ tests/ui/helpers.test.ts       — unit tests for pure helper functions
 ```
 tsconfig.json                  — add jsx, jsxFactory, jsxFragmentFactory
 src/storage/keys.ts            — add dashboardPostId, directActionsEnabled, escalation(id)
-src/main.ts                    — addCustomPostType; replace "Health Check" open-dashboard menu item
+src/main.ts                    — legacy custom post API; replace "Health Check" open-dashboard menu item
 ```
 
 ---
@@ -896,10 +896,10 @@ import { DashboardPost } from './ui/dashboard-post';
 import { makeDashboardPreview } from './ui/dashboard-preview';
 ```
 
-Add `addCustomPostType` registration (after `Devvit.configure`):
+Add `legacy custom post API` registration (after `Devvit.configure`):
 
 ```typescript
-Devvit.addCustomPostType({
+legacy Blocks custom post API({
   name: 'AMIS Dashboard',
   height: 'tall',
   render: DashboardPost,
@@ -955,7 +955,7 @@ Devvit.configure({
   http: true,
 });
 
-Devvit.addCustomPostType({
+legacy Blocks custom post API({
   name: 'AMIS Dashboard',
   height: 'tall',
   render: DashboardPost,
@@ -1263,7 +1263,7 @@ Expected: 0 errors in source files (pre-existing `@devvit/public-api` node_modul
 
 ```bash
 # Custom post type registered
-grep -c 'addCustomPostType' src/main.ts
+grep -c 'legacy custom post API' src/main.ts
 
 # Open Dashboard menu item exists
 grep -c 'Open Dashboard' src/main.ts
@@ -1316,6 +1316,6 @@ git commit -m "fix: address playtest integration issues"
 
 - `npm test` — 126 tests green
 - `npx tsc --noEmit` — 0 source errors
-- `src/main.ts` contains `addCustomPostType`, `AMIS: Open Dashboard` menu item
+- `src/main.ts` contains `legacy custom post API`, `AMIS: Open Dashboard` menu item
 - `src/ui/` contains all 6 files (4 tsx + 2 ts)
 - A non-technical observer watching `devvit playtest` can explain: what each item card shows, why the AI suggested that action, and that the moderator remains in control at all times

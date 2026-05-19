@@ -10,6 +10,7 @@ const mockItem: ModItem = {
   reportReasons: ['spam'],
   contentType: 'post',
   subredditId: 't5_abc',
+  editedAt: 0,
 };
 
 const store: Record<string, string> = {};
@@ -42,6 +43,10 @@ const mockEmbeddingClient = {
   embed: jest.fn().mockResolvedValue([[0.1, 0.2]]),
 };
 
+const mockProvider = {
+  embedding: mockEmbeddingClient,
+};
+
 describe('runQueueProcessor', () => {
   beforeEach(() => {
     Object.keys(store).forEach((k) => delete store[k]);
@@ -52,7 +57,7 @@ describe('runQueueProcessor', () => {
     await runQueueProcessor(
       'testsubreddit',
       mockKv as any,
-      mockEmbeddingClient as any,
+      mockProvider as any,
       mockReddit as any
     );
 

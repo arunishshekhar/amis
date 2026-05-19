@@ -11,6 +11,7 @@ const mockItem: ModItem = {
   reportReasons: ['spam'],
   contentType: 'post',
   subredditId: 's1',
+  editedAt: 0,
 };
 
 const makeKv = () => {

@@ -16,7 +16,7 @@ Phase 5 delivers the moderator-facing UI layer. Everything built in Phases 1–4
 
 ### Entry Point
 
-The dashboard is a **Devvit custom post** (`Devvit.addCustomPostType`) — a single persistent post pinned in the subreddit that renders the full interactive UI. The post is created once and reused across all subsequent opens.
+The dashboard is a **Devvit custom post** (`legacy Blocks custom post API`) — a single persistent post pinned in the subreddit that renders the full interactive UI. The post is created once and reused across all subsequent opens.
 
 **"AMIS: Open Dashboard" menu item behavior:**
 1. Reads `KEYS.dashboardPostId` from KV
@@ -25,7 +25,7 @@ The dashboard is a **Devvit custom post** (`Devvit.addCustomPostType`) — a sin
 
 **Post type registration:**
 ```typescript
-Devvit.addCustomPostType({
+legacy Blocks custom post API({
   name: 'AMIS Dashboard',
   height: 'tall',
   render: DashboardPost,
@@ -200,7 +200,7 @@ src/ui/settings-view.tsx      — settings panel; direct actions toggle; queue r
 
 ```
 src/storage/keys.ts           — add dashboardPostId, directActionsEnabled, escalation(id)  (3 new keys)
-src/main.ts                   — addCustomPostType; update "Open Dashboard" menu item
+src/main.ts                   — legacy custom post API; update "Open Dashboard" menu item
 tsconfig.json                 — add jsx, jsxFactory, jsxFragmentFactory
 ```
 

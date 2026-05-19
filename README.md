@@ -89,7 +89,7 @@ npm test               # run full test suite
 npm run test:watch     # watch mode
 ```
 
-> **Note:** Devvit block components (`.tsx` files in `src/ui/`) require the Devvit runtime and cannot be unit-tested in Jest. Verified via `devvit playtest`. All pure logic is covered by Jest.
+> **Note:** The dashboard is a Devvit Web view in `public/index.html`; server behavior and pure logic are covered by Jest. End-to-end web view behavior is verified with `devvit playtest`.
 
 ---
 

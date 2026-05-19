@@ -18,15 +18,15 @@ describe('ingestRules', () => {
       id: 'rule:0',
       source: 'rule',
       title: 'No spam',
-      text: 'No spam: Do not post spam.',
-      metadata: { priority: '0' },
+      text: 'No spam\n\nDescription: Do not post spam.',
+      metadata: { priority: '0', description: 'Do not post spam.' },
     });
     expect(result[1]).toEqual({
       id: 'rule:1',
       source: 'rule',
       title: 'Be civil',
-      text: 'Be civil: Treat others with respect.',
-      metadata: { priority: '1' },
+      text: 'Be civil\n\nDescription: Treat others with respect.',
+      metadata: { priority: '1', description: 'Treat others with respect.' },
     });
   });
 
@@ -34,7 +34,7 @@ describe('ingestRules', () => {
     const getRules = makeGetRules([{ description: 'Some rule.' }]);
     const result = await ingestRules('testsubreddit', getRules);
     expect(result[0].title).toBe('Rule 1');
-    expect(result[0].text).toBe('Rule 1: Some rule.');
+    expect(result[0].text).toBe('Rule 1\n\nDescription: Some rule.');
   });
 
   it('returns empty array when no rules', async () => {

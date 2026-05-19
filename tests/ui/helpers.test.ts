@@ -5,7 +5,7 @@ import {
   truncate,
   formatStats,
   sortedInsights,
-} from '../../src/ui/helpers';
+} from '../../src/shared/dashboard-helpers';
 import type { Recommendation } from '../../src/types/recommendation';
 import type { ConsistencyInsight } from '../../src/types/consistency-insight';
 

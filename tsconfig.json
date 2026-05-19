@@ -5,6 +5,7 @@
     "moduleResolution": "bundler",
     "strict": true,
     "esModuleInterop": true,
+    "skipLibCheck": true,
     "outDir": "dist",
     "jsx": "react",
     "jsxFactory": "Devvit.createElement",

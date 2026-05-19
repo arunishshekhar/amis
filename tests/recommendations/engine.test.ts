@@ -12,6 +12,7 @@ const mockItem: ModItem = {
   reportReasons: ['spam'],
   contentType: 'post',
   subredditId: 't5_abc',
+  editedAt: 0,
 };
 
 const mockPolicy: PolicyObject = {

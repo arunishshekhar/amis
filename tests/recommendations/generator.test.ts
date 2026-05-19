@@ -12,6 +12,7 @@ const makeItem = (overrides: Partial<ModItem> = {}): ModItem => ({
   contentType: 'post',
   subredditId: 't5_abc',
   ...overrides,
+  editedAt: overrides.editedAt ?? 0,
 });
 
 const makePolicy = (id = 'rule:0', title = 'No spam'): PolicyObject => ({
@@ -27,26 +28,26 @@ describe('generateRecommendation — action branches', () => {
     const result = generateRecommendation(makeItem(), [{ policy: makePolicy(), similarity: 0.9 }]);
     expect(result.suggestedAction).toBe('remove');
     expect(result.riskLevel).toBe('high');
-    expect(result.confidenceScore).toBe(Math.round(75 + 0.9 * 25));
+    expect(result.confidenceScore).toBe(Math.round(60 + 0.9 * 40));
     expect(result.matchedPolicyId).toBe('rule:0');
     expect(result.matchedPolicyTitle).toBe('No spam');
     expect(result.rationale).toContain('No spam');
     expect(result.rationale).toContain('90%');
   });
 
-  it('returns remove/medium when 0.70 <= similarity < 0.85', () => {
-    const result = generateRecommendation(makeItem(), [{ policy: makePolicy(), similarity: 0.75 }]);
+  it('returns remove/medium when 0.65 <= similarity < 0.75', () => {
+    const result = generateRecommendation(makeItem(), [{ policy: makePolicy(), similarity: 0.7 }]);
     expect(result.suggestedAction).toBe('remove');
     expect(result.riskLevel).toBe('medium');
-    expect(result.confidenceScore).toBe(Math.round(50 + 0.75 * 30));
+    expect(result.confidenceScore).toBe(Math.round(40 + 0.7 * 50));
     expect(result.rationale).toContain('medium');
   });
 
-  it('returns monitor/medium when 0.50 <= similarity < 0.70', () => {
+  it('returns monitor/medium when 0.60 <= similarity < 0.65', () => {
     const result = generateRecommendation(makeItem(), [{ policy: makePolicy(), similarity: 0.6 }]);
     expect(result.suggestedAction).toBe('monitor');
     expect(result.riskLevel).toBe('medium');
-    expect(result.confidenceScore).toBe(Math.round(30 + 0.6 * 20));
+    expect(result.confidenceScore).toBe(Math.round(20 + 0.6 * 40));
     expect(result.rationale).toContain('Possible concern');
   });
 

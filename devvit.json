@@ -1,0 +1,96 @@
+{
+  "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
+  "name": "ai-mis",
+  "post": {
+    "dir": "public",
+    "entrypoints": {
+      "default": {
+        "entry": "index.html",
+        "height": "tall"
+      }
+    }
+  },
+  "server": {
+    "entry": "dist/server/index.cjs"
+  },
+  "permissions": {
+    "http": {
+      "enable": true,
+      "domains": [
+        "api.openai.com",
+        "generativelanguage.googleapis.com",
+        "api.anthropic.com",
+        "api.voyageai.com"
+      ]
+    },
+    "redis": true,
+    "reddit": {
+      "enable": true
+    }
+  },
+  "triggers": {
+    "onPostSubmit": "/internal/triggers/post-submit",
+    "onAppInstall": "/internal/triggers/app-install"
+  },
+  "menu": {
+    "items": [
+      {
+        "label": "AMIS: Open Dashboard",
+        "description": "Open the AI Moderation Intelligence Dashboard",
+        "forUserType": "moderator",
+        "location": "subreddit",
+        "endpoint": "/internal/menu/open-dashboard"
+      },
+      {
+        "label": "AMIS: Analyze Queue",
+        "description": "Run AI analysis on the moderation queue",
+        "forUserType": "moderator",
+        "location": "subreddit",
+        "endpoint": "/internal/menu/analyze-queue"
+      },
+      {
+        "label": "AMIS: Refresh Policy",
+        "description": "Re-ingest subreddit rules, automod, and wiki pages",
+        "forUserType": "moderator",
+        "location": "subreddit",
+        "endpoint": "/internal/menu/refresh-policy"
+      },
+      {
+        "label": "AMIS: Health Check",
+        "description": "Check AMIS status — item count, embeddings, insights",
+        "forUserType": "moderator",
+        "location": "subreddit",
+        "endpoint": "/internal/menu/health-check"
+      },
+      {
+        "label": "AMIS: Consistency Check",
+        "description": "Run consistency analysis on recent moderation decisions",
+        "forUserType": "moderator",
+        "location": "subreddit",
+        "endpoint": "/internal/menu/consistency-check"
+      }
+    ]
+  },
+  "scheduler": {
+    "tasks": {
+      "queue-processor": {
+        "endpoint": "/internal/cron/queue-processor",
+        "cron": "0 */6 * * *"
+      },
+      "policy-refresh": {
+        "endpoint": "/internal/cron/policy-refresh"
+      },
+      "recommendation-run": {
+        "endpoint": "/internal/cron/recommendation-run"
+      },
+      "consistency-analysis": {
+        "endpoint": "/internal/cron/consistency-analysis",
+        "cron": "0 2 * * *"
+      }
+    }
+  },
+  "scripts": {
+    "dev": "npm run build:server",
+    "build": "npm run build:server"
+  }
+}

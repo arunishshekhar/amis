@@ -25,6 +25,7 @@ describe('normalizePost', () => {
       reportReasons: ['spam', 'harassment'],
       contentType: 'post',
       subredditId: 't5_xyz',
+      editedAt: 0,
     });
   });
 
