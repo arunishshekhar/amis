@@ -47,21 +47,79 @@ export function buildRemovalModNote(rec: CommentRecommendation): string {
   return note.length <= 100 ? note : `${note.slice(0, 97).trimEnd()}...`;
 }
 
+function buildRemovalReasonTitle(rec: CommentRecommendation): string {
+  const rule = rec.matchedPolicyTitle?.trim() || 'subreddit rules';
+  const title = `AMIS: ${rule}`.replace(/\s+/g, ' ').trim();
+  return title.length <= 80 ? title : `${title.slice(0, 77).trimEnd()}...`;
+}
+
+function buildRemovalReasonMessage(rec: CommentRecommendation): string {
+  const rule = rec.matchedPolicyTitle?.trim() || 'this subreddit\'s rules';
+  return [
+    `Your post was removed because AMIS detected a likely violation of: ${rule}.`,
+    '',
+    'A short AMIS note with the specific reason is attached to this removal action for the moderation team.',
+    '',
+    'If you believe this was a mistake, please contact the moderators.',
+  ].join('\n');
+}
+
+async function getOrCreateRemovalReasonId(
+  reddit: RedditAPIClient,
+  subredditName: string,
+  rec: CommentRecommendation
+): Promise<string> {
+  if (!subredditName) return '';
+  const title = buildRemovalReasonTitle(rec);
+  const reasons = await reddit.getSubredditRemovalReasons(subredditName).catch((err) => {
+    console.warn(`addRemovalReasonNote: failed to load removal reasons for r/${subredditName}:`, err);
+    return [];
+  });
+  const existing = reasons.find((reason) => reason.title.trim().toLowerCase() === title.toLowerCase());
+  if (existing) return existing.id;
+
+  return reddit.addSubredditRemovalReason(subredditName, {
+    title,
+    message: buildRemovalReasonMessage(rec),
+  });
+}
+
 export async function addRemovalReasonNote(
+  reddit: RedditAPIClient,
+  postId: string,
+  rec: CommentRecommendation,
+  context: string,
+  subredditName = ''
+): Promise<void> {
+  try {
+    const reasonId = await getOrCreateRemovalReasonId(reddit, subredditName, rec);
+    await reddit.addRemovalNote({
+      itemIds: [postId],
+      reasonId,
+      modNote: buildRemovalModNote(rec),
+    });
+    console.log(`${context}: added Reddit removal reason note to post ${postId}`);
+  } catch (err) {
+    console.warn(`${context}: failed to add Reddit removal reason note to post ${postId}:`, err);
+  }
+}
+
+export async function commentRemovalAsModerator(
   reddit: RedditAPIClient,
   postId: string,
   rec: CommentRecommendation,
   context: string
 ): Promise<void> {
   try {
-    await reddit.addRemovalNote({
-      itemIds: [postId],
-      reasonId: '',
-      modNote: buildRemovalModNote(rec),
+    const comment = await reddit.submitComment({
+      id: postId,
+      text: buildRemovalComment(rec),
+      runAs: 'APP',
     });
-    console.log(`${context}: added Reddit removal reason note to post ${postId}`);
+    await comment.distinguish(true);
+    console.log(`${context}: added distinguished removal comment to post ${postId}`);
   } catch (err) {
-    console.warn(`${context}: failed to add Reddit removal reason note to post ${postId}:`, err);
+    console.warn(`${context}: failed to add distinguished removal comment to post ${postId}:`, err);
   }
 }
 

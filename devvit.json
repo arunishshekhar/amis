@@ -32,6 +32,7 @@
   },
   "triggers": {
     "onPostSubmit": "/internal/triggers/post-submit",
+    "onPostUpdate": "/internal/triggers/post-update",
     "onAppInstall": "/internal/triggers/app-install"
   },
   "menu": {

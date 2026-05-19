@@ -23,7 +23,7 @@ import { getModItem, saveModItem } from '../storage/mod-item-store.js';
 import { getAIConfig, saveAIConfig } from '../storage/ai-config-store.js';
 import { saveDecision } from '../storage/mod-decision-store.js';
 import { sortItemsByRisk } from '../shared/dashboard-helpers.js';
-import { addRemovalReasonNote } from '../shared/moderation-comments.js';
+import { addRemovalReasonNote, commentRemovalAsModerator } from '../shared/moderation-comments.js';
 import { makeKvStore } from './kv-adapter.js';
 import type { AIConfig } from '../storage/ai-config-store.js';
 
@@ -202,7 +202,8 @@ router.post('/api/action', async (req, res) => {
           subredditId: subredditName,
         }),
       ]);
-      await addRemovalReasonNote(reddit as any, id, removalRec, '/api/action remove notice');
+      await addRemovalReasonNote(reddit as any, id, removalRec, '/api/action remove notice', subredditName);
+      await commentRemovalAsModerator(reddit as any, id, removalRec, '/api/action remove notice');
     } else if (type === 'approve') {
       await Promise.all([
         markActioned(kv as any, id, 'approve', actor),
@@ -272,7 +273,7 @@ router.post('/api/ai-config', async (req, res) => {
 // Trigger endpoints
 // ---------------------------------------------------------------------------
 
-router.post('/internal/triggers/post-submit', async (req, res) => {
+async function handlePostAnalysisTrigger(req: express.Request, res: express.Response, contextLabel: string) {
   try {
     const event = req.body as any;
     const post = event?.post;
@@ -290,12 +291,20 @@ router.post('/internal/triggers/post-submit', async (req, res) => {
     const autoActEnabled = (await settings.get<boolean>('AUTO_ACT_ENABLED')) ?? false;
     const rawThreshold = await settings.get<number>('AUTO_REMOVE_THRESHOLD');
     const autoRemoveThreshold = typeof rawThreshold === 'number' ? rawThreshold : 90;
-    await analyseAndActOnPost(post, kv as any, provider, reddit as any, !!autoActEnabled, autoRemoveThreshold);
+    await analyseAndActOnPost(post, kv as any, provider, reddit as any, !!autoActEnabled, autoRemoveThreshold, subredditName);
     res.json({ ok: true });
   } catch (err) {
-    console.error('/internal/triggers/post-submit error:', err);
+    console.error(`${contextLabel} error:`, err);
     res.json({ ok: true }); // never block posts
   }
+}
+
+router.post('/internal/triggers/post-submit', async (req, res) => {
+  await handlePostAnalysisTrigger(req, res, '/internal/triggers/post-submit');
+});
+
+router.post('/internal/triggers/post-update', async (req, res) => {
+  await handlePostAnalysisTrigger(req, res, '/internal/triggers/post-update');
 });
 
 router.post('/internal/triggers/app-install', async (_req, res) => {

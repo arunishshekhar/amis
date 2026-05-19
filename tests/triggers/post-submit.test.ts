@@ -1,6 +1,8 @@
 import {
   addRemovalReasonNote,
   buildRemovalModNote,
+  buildRemovalComment,
+  commentRemovalAsModerator,
   commentOnPost,
   buildViolationAlert,
   messageAuthor,
@@ -63,23 +65,46 @@ describe('post-submit author alerts', () => {
 
   it('adds a native Reddit removal reason note', async () => {
     const reddit = {
+      getSubredditRemovalReasons: jest.fn().mockResolvedValue([{ id: 'reason-1', title: 'AMIS: No spam', message: 'Existing' }]),
       addRemovalNote: jest.fn().mockResolvedValue(undefined),
     };
 
     await addRemovalReasonNote(reddit as any, 't3_post', {
       matchedPolicyTitle: 'No spam',
       rationale: 'Spam-like content.',
-    }, 'test');
+    }, 'test', 'testsub');
 
+    expect(reddit.getSubredditRemovalReasons).toHaveBeenCalledWith('testsub');
     expect(reddit.addRemovalNote).toHaveBeenCalledWith({
       itemIds: ['t3_post'],
-      reasonId: '',
+      reasonId: 'reason-1',
       modNote: 'AMIS: No spam - Spam-like content.',
     });
   });
 
+  it('creates an AMIS removal reason when one does not exist', async () => {
+    const reddit = {
+      getSubredditRemovalReasons: jest.fn().mockResolvedValue([]),
+      addSubredditRemovalReason: jest.fn().mockResolvedValue('new-reason'),
+      addRemovalNote: jest.fn().mockResolvedValue(undefined),
+    };
+
+    await addRemovalReasonNote(reddit as any, 't3_post', {
+      matchedPolicyTitle: 'No spam',
+      rationale: 'Spam-like content.',
+    }, 'test', 'testsub');
+
+    expect(reddit.addSubredditRemovalReason).toHaveBeenCalledWith('testsub', {
+      title: 'AMIS: No spam',
+      message: expect.stringContaining('AMIS detected a likely violation of: No spam'),
+    });
+    expect(reddit.addRemovalNote).toHaveBeenCalledWith(expect.objectContaining({ reasonId: 'new-reason' }));
+  });
+
   it('does not throw when native removal note creation fails', async () => {
     const reddit = {
+      getSubredditRemovalReasons: jest.fn().mockResolvedValue([]),
+      addSubredditRemovalReason: jest.fn().mockResolvedValue('reason-1'),
       addRemovalNote: jest.fn().mockRejectedValue(new Error('note failed')),
     };
 
@@ -87,6 +112,30 @@ describe('post-submit author alerts', () => {
       matchedPolicyTitle: 'No spam',
       rationale: 'Spam-like content.',
     }, 'test')).resolves.toBeUndefined();
+  });
+
+  it('adds and distinguishes a visible moderator removal comment', async () => {
+    const comment = {
+      distinguish: jest.fn().mockResolvedValue(undefined),
+    };
+    const reddit = {
+      submitComment: jest.fn().mockResolvedValue(comment),
+    };
+
+    await commentRemovalAsModerator(reddit as any, 't3_post', {
+      matchedPolicyTitle: 'No spam',
+      rationale: 'Spam-like content.',
+    }, 'test');
+
+    expect(reddit.submitComment).toHaveBeenCalledWith({
+      id: 't3_post',
+      text: buildRemovalComment({
+        matchedPolicyTitle: 'No spam',
+        rationale: 'Spam-like content.',
+      }),
+      runAs: 'APP',
+    });
+    expect(comment.distinguish).toHaveBeenCalledWith(true);
   });
 
   it('messages the post author with the violation alert', async () => {

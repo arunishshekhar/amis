@@ -19,15 +19,27 @@ describe('ingestRules', () => {
       source: 'rule',
       title: 'No spam',
       text: 'No spam\n\nDescription: Do not post spam.',
-      metadata: { priority: '0', description: 'Do not post spam.' },
+      metadata: { priority: '0', description: 'Do not post spam.', violationReason: '' },
     });
     expect(result[1]).toEqual({
       id: 'rule:1',
       source: 'rule',
       title: 'Be civil',
       text: 'Be civil\n\nDescription: Treat others with respect.',
-      metadata: { priority: '1', description: 'Treat others with respect.' },
+      metadata: { priority: '1', description: 'Treat others with respect.', violationReason: '' },
     });
+  });
+
+  it('includes Reddit removal/violation reason text when present', async () => {
+    const getRules = makeGetRules([
+      { shortName: 'Known facts', description: 'Known facts must be correct.', violationReason: 'Do not lie about known facts.' },
+    ]);
+
+    const result = await ingestRules('testsubreddit', getRules);
+
+    expect(result[0].text).toContain('Description: Known facts must be correct.');
+    expect(result[0].text).toContain('Removal reason: Do not lie about known facts.');
+    expect(result[0].metadata.violationReason).toBe('Do not lie about known facts.');
   });
 
   it('falls back to "Rule N" title when shortName is missing', async () => {

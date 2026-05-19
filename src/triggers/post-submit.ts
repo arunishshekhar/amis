@@ -12,7 +12,7 @@ import { validateStructuralVerdict } from '../policy/structural-validator';
 import {
   addRemovalReasonNote,
   buildViolationAlert,
-  commentOnPost,
+  commentRemovalAsModerator,
   messageAuthor,
   shouldAlertAuthor,
 } from '../shared/moderation-comments';
@@ -69,7 +69,8 @@ export async function analyseAndActOnPost(
   provider: AIProvider, // full provider — we need both embedding and textGen
   reddit: RedditAPIClient,
   autoActEnabled: boolean,
-  autoRemoveThreshold: number
+  autoRemoveThreshold: number,
+  subredditName = ''
 ): Promise<void> {
   try {
     // 1. Normalise
@@ -167,19 +168,15 @@ export async function analyseAndActOnPost(
       };
     }
 
-    // 7. Auto-act if enabled and confidence threshold is met
     if (shouldAlertAuthor(rec)) {
       const alertText = buildViolationAlert(rec);
-      await Promise.all([
-        commentOnPost(reddit, item.id, alertText, 'analyseAndActOnPost violation alert'),
-        messageAuthor(
-          reddit,
-          item.author,
-          'Your post may violate subreddit rules',
-          alertText,
-          'analyseAndActOnPost violation alert'
-        ),
-      ]);
+      await messageAuthor(
+        reddit,
+        item.author,
+        'Your post may violate subreddit rules',
+        alertText,
+        'analyseAndActOnPost violation alert'
+      );
     }
 
     // 7. Auto-act if enabled and confidence threshold is met
@@ -192,7 +189,8 @@ export async function analyseAndActOnPost(
         rec.confidenceScore >= autoRemoveThreshold
       ) {
         await (reddit as any).remove(item.id, false);
-        await addRemovalReasonNote(reddit, item.id, rec, 'analyseAndActOnPost auto-remove notice');
+        await addRemovalReasonNote(reddit, item.id, rec, 'analyseAndActOnPost auto-remove notice', subredditName);
+        await commentRemovalAsModerator(reddit, item.id, rec, 'analyseAndActOnPost auto-remove notice');
         autoActed = true;
         autoActedAction = 'remove';
         console.log(

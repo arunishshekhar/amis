@@ -20,10 +20,14 @@ Your job is to determine whether the post violates any of the rules.
 When a rule says "description", it refers to the Body field.
 
 ## How to evaluate rules
+- Evaluate EVERY rule against BOTH Title and Body before deciding.
+- Do not stop after finding that one rule is not violated. A post can comply with one rule and still violate another.
+- Pick the strongest violated rule. If no rule is violated, explain why none apply.
 
 ### Structural / formatting rules (check the post text directly)
 - "No titles starting with A" → check if Title begins with the letter A (case-insensitive).
 - "No descriptions starting with C" → check if Body begins with the letter C.
+- If a rule does not name a specific field, check both Title and Body.
 - Apply these character/word rules literally and strictly.
 
 ### Factual accuracy rules (actively reason about truth)
@@ -83,6 +87,7 @@ export async function classifyWithLLM(
   const rulesBlock = relevantPolicies
     .map((p) => {
       const description = p.metadata?.description ?? '';
+      const violationReason = p.metadata?.violationReason ?? '';
       const lines = [
         `ID: ${p.id}`,
         `Title: ${p.title}`,
@@ -90,6 +95,9 @@ export async function classifyWithLLM(
       // Include the mod's description if it adds detail beyond the title
       if (description && description !== p.title) {
         lines.push(`Description: ${description}`);
+      }
+      if (violationReason && violationReason !== description) {
+        lines.push(`Violation / removal reason: ${violationReason}`);
       }
       lines.push(`Full Rule Text: ${p.text}`);
       return lines.join('\n');
