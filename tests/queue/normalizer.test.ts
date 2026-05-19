@@ -33,6 +33,29 @@ describe('normalizePost', () => {
     const raw = { ...BASE, title: 'T', body: undefined, reports: [] };
     expect(normalizePost(raw as any).body).toBe('');
   });
+
+  it('maps raw Reddit JSON field names from trigger payloads', () => {
+    const raw = {
+      id: 't3_post',
+      author: 'alice',
+      createdUtc: 1770000000,
+      edited: 1770000100,
+      subreddit_id: 't5_raw',
+      title: 'Raw post',
+      selftext: 'Raw body',
+      userReports: [['spam', 1]],
+      modReports: [['rule break', 'mod']],
+    };
+
+    const result = normalizePost(raw as any);
+
+    expect(result.author).toBe('alice');
+    expect(result.timestamp).toBe(1770000000000);
+    expect(result.editedAt).toBe(1770000100000);
+    expect(result.body).toBe('Raw body');
+    expect(result.subredditId).toBe('t5_raw');
+    expect(result.reportReasons).toEqual(['spam', 'rule break']);
+  });
 });
 
 describe('normalizeComment', () => {

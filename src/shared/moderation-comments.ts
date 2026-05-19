@@ -65,6 +65,28 @@ export async function addRemovalReasonNote(
   }
 }
 
+export async function messageAuthor(
+  reddit: RedditAPIClient,
+  author: string,
+  subject: string,
+  text: string,
+  context: string
+): Promise<void> {
+  const username = author.replace(/^u\//i, '').trim();
+  if (!username || username === '[deleted]') return;
+
+  try {
+    await reddit.sendPrivateMessage({
+      to: username,
+      subject,
+      text,
+    });
+    console.log(`${context}: messaged u/${username}`);
+  } catch (err) {
+    console.warn(`${context}: failed to message u/${username}:`, err);
+  }
+}
+
 export async function commentOnPost(
   reddit: RedditAPIClient,
   postId: string,

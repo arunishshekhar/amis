@@ -3,6 +3,7 @@ import {
   buildRemovalModNote,
   commentOnPost,
   buildViolationAlert,
+  messageAuthor,
   shouldAlertAuthor,
 } from '../../src/shared/moderation-comments';
 
@@ -86,5 +87,30 @@ describe('post-submit author alerts', () => {
       matchedPolicyTitle: 'No spam',
       rationale: 'Spam-like content.',
     }, 'test')).resolves.toBeUndefined();
+  });
+
+  it('messages the post author with the violation alert', async () => {
+    const reddit = {
+      sendPrivateMessage: jest.fn().mockResolvedValue(undefined),
+    };
+
+    await messageAuthor(reddit as any, 'u/alice', 'Subject', 'Body', 'test');
+
+    expect(reddit.sendPrivateMessage).toHaveBeenCalledWith({
+      to: 'alice',
+      subject: 'Subject',
+      text: 'Body',
+    });
+  });
+
+  it('skips author messages when the author is unavailable', async () => {
+    const reddit = {
+      sendPrivateMessage: jest.fn(),
+    };
+
+    await messageAuthor(reddit as any, '', 'Subject', 'Body', 'test');
+    await messageAuthor(reddit as any, '[deleted]', 'Subject', 'Body', 'test');
+
+    expect(reddit.sendPrivateMessage).not.toHaveBeenCalled();
   });
 });

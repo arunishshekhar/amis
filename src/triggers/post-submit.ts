@@ -13,6 +13,7 @@ import {
   addRemovalReasonNote,
   buildViolationAlert,
   commentOnPost,
+  messageAuthor,
   shouldAlertAuthor,
 } from '../shared/moderation-comments';
 import { cosineSimilarity } from '../utils/cosine';
@@ -168,7 +169,17 @@ export async function analyseAndActOnPost(
 
     // 7. Auto-act if enabled and confidence threshold is met
     if (shouldAlertAuthor(rec)) {
-      await commentOnPost(reddit, item.id, buildViolationAlert(rec), 'analyseAndActOnPost violation alert');
+      const alertText = buildViolationAlert(rec);
+      await Promise.all([
+        commentOnPost(reddit, item.id, alertText, 'analyseAndActOnPost violation alert'),
+        messageAuthor(
+          reddit,
+          item.author,
+          'Your post may violate subreddit rules',
+          alertText,
+          'analyseAndActOnPost violation alert'
+        ),
+      ]);
     }
 
     // 7. Auto-act if enabled and confidence threshold is met

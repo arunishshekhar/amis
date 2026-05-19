@@ -1,6 +1,13 @@
 const views = new Set(['triage', 'history', 'insights', 'settings']);
 const initialView = views.has(window.location.hash.slice(1)) ? window.location.hash.slice(1) : 'triage';
-const state = { data: null, view: initialView, busy: false };
+const PAGE_SIZE = 6;
+const state = {
+  data: null,
+  view: initialView,
+  busy: false,
+  filters: { history: 'all' },
+  pages: { triage: 1, history: 1 },
+};
 const $ = (selector) => document.querySelector(selector);
 const view = $('#view');
 const toast = $('#toast');
@@ -113,22 +120,81 @@ function itemCard(rec, item, mode) {
       </div>
       <p class="body">${escapeHtml(body)}</p>
       <p class="subtle">${escapeHtml(text(rec.rationale, 'No rationale.'))}</p>
-      <p class="subtle">Policy: ${escapeHtml(text(rec.matchedPolicyTitle, 'none'))} | Reports: ${escapeHtml(reports)}</p>
+      <p class="subtle">Rule: ${escapeHtml(text(rec.matchedPolicyTitle, rec.isDuplicate ? 'Near-duplicate / repost' : 'none'))} | Reports: ${escapeHtml(reports)}</p>
       ${rec.actionTaken ? `<p class="subtle">Action: ${escapeHtml(rec.actionTaken)} by ${escapeHtml(text(rec.actionedBy, 'unknown'))} at ${date(rec.actionedAt)}</p>` : ''}
       ${actions}
     </article>`;
+}
+
+function paginate(items, key) {
+  const pageCount = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const current = Math.min(Math.max(1, state.pages[key] || 1), pageCount);
+  state.pages[key] = current;
+  const start = (current - 1) * PAGE_SIZE;
+  return {
+    items: items.slice(start, start + PAGE_SIZE),
+    current,
+    pageCount,
+  };
+}
+
+function paginationControls(key, current, pageCount, total) {
+  if (pageCount <= 1) return '';
+  return `
+    <div class="pager" data-page-key="${key}">
+      <span class="subtle">Showing page ${current} of ${pageCount} (${total} items)</span>
+      <div class="actions">
+        <button type="button" data-page="${key}" data-dir="-1" ${current <= 1 ? 'disabled' : ''}>Previous</button>
+        <button type="button" data-page="${key}" data-dir="1" ${current >= pageCount ? 'disabled' : ''}>Next</button>
+      </div>
+    </div>`;
 }
 
 function renderTriage(data) {
   if (!data.recs.length) {
     return '<div class="empty">No recommendations need moderator review.</div>';
   }
-  return `<div class="list">${data.recs.map((rec) => itemCard(rec, data.modItems[rec.itemId], 'triage')).join('')}</div>`;
+  const page = paginate(data.recs, 'triage');
+  return `
+    ${paginationControls('triage', page.current, page.pageCount, data.recs.length)}
+    <div class="list">${page.items.map((rec) => itemCard(rec, data.modItems[rec.itemId], 'triage')).join('')}</div>
+    ${paginationControls('triage', page.current, page.pageCount, data.recs.length)}`;
 }
 
 function renderHistory(data) {
-  if (!data.history.length) return '<div class="empty">No AMIS moderation history yet.</div>';
-  return `<div class="list">${data.history.map((rec) => itemCard(rec, data.allModItems[rec.itemId], 'history')).join('')}</div>`;
+  const approved = (data.approvedRecs || []).map((rec) => ({ ...rec, displayBucket: 'ai-approved' }));
+  const history = (data.history || []).map((rec) => ({ ...rec, displayBucket: rec.actionTaken || rec.suggestedAction }));
+  const filter = state.filters.history || 'all';
+  const items = [...approved, ...history]
+    .filter((rec) => {
+      if (filter === 'all') return true;
+      if (filter === 'ai-approved') return rec.displayBucket === 'ai-approved';
+      return rec.actionTaken === filter || rec.suggestedAction === filter;
+    })
+    .sort((a, b) => (b.actionedAt || b.generatedAt || 0) - (a.actionedAt || a.generatedAt || 0));
+
+  const controls = `
+    <div class="toolbar">
+      <label>Filter
+        <select data-filter="history">
+          ${[
+            ['all', 'All'],
+            ['ai-approved', 'AI-approved'],
+            ['remove', 'Removed'],
+            ['approve', 'Approved by mod'],
+            ['escalate', 'Escalated'],
+          ].map(([value, label]) => `<option value="${value}" ${filter === value ? 'selected' : ''}>${label}</option>`).join('')}
+        </select>
+      </label>
+    </div>`;
+
+  if (!items.length) return `${controls}<div class="empty">No items match this filter.</div>`;
+  const page = paginate(items, 'history');
+  return `
+    ${controls}
+    ${paginationControls('history', page.current, page.pageCount, items.length)}
+    <div class="list">${page.items.map((rec) => itemCard(rec, data.allModItems[rec.itemId], 'history')).join('')}</div>
+    ${paginationControls('history', page.current, page.pageCount, items.length)}`;
 }
 
 function renderInsights(data) {
@@ -228,6 +294,21 @@ window.addEventListener('hashchange', () => {
 document.addEventListener('click', (event) => {
   const button = event.target.closest('[data-action]');
   if (button) act(button.dataset.action, button.dataset.id);
+  const pageButton = event.target.closest('[data-page]');
+  if (pageButton) {
+    const key = pageButton.dataset.page;
+    state.pages[key] = (state.pages[key] || 1) + Number(pageButton.dataset.dir || 0);
+    render();
+  }
+});
+
+document.addEventListener('change', (event) => {
+  const input = event.target.closest('[data-filter]');
+  if (!input) return;
+  const key = input.dataset.filter;
+  state.filters[key] = input.value;
+  state.pages[key] = 1;
+  render();
 });
 
 document.addEventListener('submit', async (event) => {

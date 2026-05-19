@@ -45,6 +45,7 @@
     }
 
     button:hover { border-color: #3f3f46; background: #303036; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
     button:focus, input:focus, select:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
     button.primary { background: var(--accent); border-color: var(--accent); color: #042f2e; font-weight: 700; }
     button.danger { background: #451a1a; border-color: #7f1d1d; color: #fecaca; }
@@ -112,6 +113,16 @@
     .body { color: #d4d4d8; white-space: pre-wrap; overflow-wrap: anywhere; }
     .meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--muted); font-size: 12px; }
     .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .toolbar, .pager {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .pager { margin-top: 12px; }
+    .toolbar label { max-width: 220px; }
 
     .pill {
       display: inline-flex;
@@ -179,6 +190,7 @@
       .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .form-grid { grid-template-columns: 1fr; }
       .card-head { flex-direction: column; }
+      .toolbar, .pager { align-items: stretch; flex-direction: column; }
     }
   </style>
 </head>

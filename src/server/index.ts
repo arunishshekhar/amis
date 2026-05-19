@@ -15,10 +15,11 @@ import { runQueueProcessor } from '../jobs/queue-processor.js';
 import { runPolicyRefresh } from '../triggers/policy-refresh.js';
 import { runRecommendationEngine } from '../recommendations/engine.js';
 import { analyseAndActOnPost } from '../triggers/post-submit.js';
+import { normalizePost } from '../queue/normalizer.js';
 import { KEYS } from '../storage/keys.js';
 import { getAllRecommendations, getHistoryRecommendations, getRecommendation, markActioned } from '../storage/recommendation-store.js';
 import { listInsights, acknowledgeInsight } from '../storage/insight-store.js';
-import { getModItem } from '../storage/mod-item-store.js';
+import { getModItem, saveModItem } from '../storage/mod-item-store.js';
 import { getAIConfig, saveAIConfig } from '../storage/ai-config-store.js';
 import { saveDecision } from '../storage/mod-decision-store.js';
 import { sortItemsByRisk } from '../shared/dashboard-helpers.js';
@@ -74,6 +75,33 @@ function normalizeCachedPostId(postId: string): string {
   }
 }
 
+async function getDisplayModItem(kv: ReturnType<typeof makeKvStore>, id: string) {
+  const stored = await getModItem(kv as any, id);
+  if (stored?.author && stored.timestamp && (stored.body || stored.title)) return stored;
+
+  try {
+    const post = await reddit.getPostById(id as `t3_${string}`);
+    const normalized = normalizePost(post as any);
+    const repaired = {
+      ...(stored ?? {}),
+      ...normalized,
+      author: normalized.author || stored?.author || '',
+      title: normalized.title || stored?.title || '',
+      body: normalized.body || stored?.body || '',
+      timestamp: normalized.timestamp || stored?.timestamp || 0,
+      editedAt: normalized.editedAt || stored?.editedAt || 0,
+      reportReasons: normalized.reportReasons.length ? normalized.reportReasons : stored?.reportReasons ?? [],
+      contentType: stored?.contentType ?? normalized.contentType,
+      subredditId: normalized.subredditId || stored?.subredditId || '',
+    };
+    await saveModItem(kv as any, repaired);
+    return repaired;
+  } catch (err) {
+    if (!stored) console.warn(`/api/dashboard: failed to fetch post ${id}:`, err);
+    return stored;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
@@ -103,6 +131,9 @@ router.get('/api/dashboard', async (_req, res) => {
     const aiApprovedCount = rawRecs.filter(
       (r) => r.suggestedAction === 'approve' && !r.actionedAt
     ).length;
+    const approvedRecs = rawRecs
+      .filter((r) => r.suggestedAction === 'approve' && !r.actionedAt)
+      .sort((a, b) => b.generatedAt - a.generatedAt);
     const actionable = rawRecs.filter(
       (r) => r.suggestedAction !== 'approve' && !r.actionedAt
     );
@@ -112,7 +143,7 @@ router.get('/api/dashboard', async (_req, res) => {
     const modItems: Record<string, unknown> = {};
     await Promise.all(
       sortedRecs.map(async (rec) => {
-        const item = await getModItem(kv as any, rec.itemId);
+        const item = await getDisplayModItem(kv, rec.itemId);
         if (item) modItems[rec.itemId] = item;
       })
     );
@@ -120,9 +151,9 @@ router.get('/api/dashboard', async (_req, res) => {
     // Load mod items for history
     const allModItems: Record<string, unknown> = { ...modItems };
     await Promise.all(
-      rawHistory.map(async (rec) => {
+      [...rawHistory, ...approvedRecs].map(async (rec) => {
         if (!allModItems[rec.itemId]) {
-          const item = await getModItem(kv as any, rec.itemId);
+          const item = await getDisplayModItem(kv, rec.itemId);
           if (item) allModItems[rec.itemId] = item;
         }
       })
@@ -130,6 +161,7 @@ router.get('/api/dashboard', async (_req, res) => {
 
     res.json({
       recs: sortedRecs,
+      approvedRecs,
       aiApprovedCount,
       modItems,
       allModItems,
