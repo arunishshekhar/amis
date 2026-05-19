@@ -21,7 +21,8 @@ export async function createAIProvider(settings: Settings, kvStore?: KVStore): P
 
   const aiConfig = kvStore ? await getAIConfig(kvStore) : null;
   const providerName = providerFromSettings ?? aiConfig?.provider ?? 'openai';
-  const aiKey = await settings.get('AI_API_KEY') as string | undefined;
+  const aiKey = (await settings.get('AI_API_KEY') as string | undefined)
+    ?? aiConfig?.apiKey;
   if (!aiKey) throw new Error('createAIProvider: AI_API_KEY is not set');
 
   if (providerName === 'openai') {
@@ -31,7 +32,8 @@ export async function createAIProvider(settings: Settings, kvStore?: KVStore): P
     return createGeminiProvider(aiKey);
   }
 
-  const voyageKey = await settings.get('VOYAGE_API_KEY') as string | undefined;
+  const voyageKey = (await settings.get('VOYAGE_API_KEY') as string | undefined)
+    ?? aiConfig?.voyageApiKey;
   if (!voyageKey) {
     throw new Error(`createAIProvider: VOYAGE_API_KEY is required for ${providerName} provider`);
   }

@@ -12,12 +12,28 @@ describe('createAIProvider', () => {
     expect(typeof provider.textGen.complete).toBe('function');
   });
 
-  it('uses KV-backed non-secret provider config with app setting secrets', async () => {
+  it('uses KV-backed provider config with app setting secrets', async () => {
     const settings = makeSettings({ AI_PROVIDER: 'openai', AI_API_KEY: 'sk-test' });
     const kvStore = {
       get: jest.fn(async (key: string) => {
         if (key === 'ai_config') {
           return JSON.stringify({ provider: 'gemini' });
+        }
+        return undefined;
+      }),
+    };
+
+    const provider = await createAIProvider(settings, kvStore as any);
+    expect(typeof provider.embedding.embed).toBe('function');
+    expect(typeof provider.textGen.complete).toBe('function');
+  });
+
+  it('falls back to KV-backed per-install keys', async () => {
+    const settings = makeSettings({});
+    const kvStore = {
+      get: jest.fn(async (key: string) => {
+        if (key === 'ai_config') {
+          return JSON.stringify({ provider: 'openai', apiKey: 'sk-test' });
         }
         return undefined;
       }),

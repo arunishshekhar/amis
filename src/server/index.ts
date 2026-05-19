@@ -36,11 +36,15 @@ async function publicAIConfig(config: AIConfig | null): Promise<Record<string, s
     settings.get<string>('AI_API_KEY'),
     settings.get<string>('VOYAGE_API_KEY'),
   ]);
+  const storedApiKey = config?.apiKey;
+  const storedVoyageApiKey = config?.voyageApiKey;
 
   return {
     provider: config?.provider ?? 'openai',
-    apiKeyConfigured: Boolean(apiKey),
-    voyageApiKeyConfigured: Boolean(voyageApiKey),
+    apiKeyConfigured: Boolean(apiKey || storedApiKey),
+    apiKeySource: apiKey ? 'secret' : storedApiKey ? 'dashboard' : '',
+    voyageApiKeyConfigured: Boolean(voyageApiKey || storedVoyageApiKey),
+    voyageApiKeySource: voyageApiKey ? 'secret' : storedVoyageApiKey ? 'dashboard' : '',
   };
 }
 
@@ -213,8 +217,12 @@ router.post('/api/ai-config', async (req, res) => {
     const kv = makeKvStore();
     const body = req.body as Partial<AIConfig>;
     const existing = await getAIConfig(kv as any);
+    const apiKey = body.apiKey?.trim();
+    const voyageApiKey = body.voyageApiKey?.trim();
     const config: AIConfig = {
       provider: (body.provider ?? 'openai').trim(),
+      apiKey: apiKey || existing?.apiKey,
+      voyageApiKey: voyageApiKey || existing?.voyageApiKey,
     };
     await saveAIConfig(kv as any, config);
     res.json({ ok: true });

@@ -159,6 +159,12 @@ function renderSettings(data) {
   const cfg = data.aiConfig || {};
   const apiKeyConfigured = Boolean(cfg.apiKeyConfigured);
   const voyageApiKeyConfigured = Boolean(cfg.voyageApiKeyConfigured);
+  const apiKeyStatus = cfg.apiKeySource === 'secret'
+    ? 'Key already present in secret app settings. A dashboard key can be saved for this install, but the secret app setting stays preferred.'
+    : 'Key already present in dashboard settings. Leave blank to keep it, or enter a new key to override it.';
+  const voyageApiKeyStatus = cfg.voyageApiKeySource === 'secret'
+    ? 'Key already present in secret app settings. A dashboard key can be saved for this install, but the secret app setting stays preferred.'
+    : 'Key already present in dashboard settings. Leave blank to keep it, or enter a new key to override it.';
   const currentProvider = ['openai', 'gemini', 'claude'].includes(cfg.provider || data.aiProvider)
     ? (cfg.provider || data.aiProvider)
     : 'openai';
@@ -171,12 +177,12 @@ function renderSettings(data) {
         </select>
       </label>
       <label>Provider API key
-        <input type="password" autocomplete="off" disabled placeholder="${apiKeyConfigured ? 'Configured in Devvit app settings' : 'Set AI_API_KEY in Devvit app settings'}">
-        <span class="secret-status ${apiKeyConfigured ? 'configured' : ''}">${apiKeyConfigured ? 'Configured in secret app settings.' : 'Not configured in secret app settings.'}</span>
+        <input name="apiKey" type="password" autocomplete="new-password" placeholder="${apiKeyConfigured ? 'Leave blank to keep existing key' : 'Paste API key'}">
+        <span class="secret-status ${apiKeyConfigured ? 'configured' : ''}">${apiKeyConfigured ? apiKeyStatus : 'No key configured. Enter a key to store it for this subreddit install.'}</span>
       </label>
       <label>Voyage API key
-        <input type="password" autocomplete="off" disabled placeholder="${voyageApiKeyConfigured ? 'Configured in Devvit app settings' : 'Set VOYAGE_API_KEY in Devvit app settings'}">
-        <span class="secret-status ${voyageApiKeyConfigured ? 'configured' : ''}">${voyageApiKeyConfigured ? 'Configured in secret app settings.' : 'Optional. Not configured in secret app settings.'}</span>
+        <input name="voyageApiKey" type="password" autocomplete="new-password" placeholder="${voyageApiKeyConfigured ? 'Leave blank to keep existing key' : 'Optional'}">
+        <span class="secret-status ${voyageApiKeyConfigured ? 'configured' : ''}">${voyageApiKeyConfigured ? voyageApiKeyStatus : 'Optional. Enter a key for Claude embeddings.'}</span>
       </label>
       <div class="actions">
         <button class="primary" type="submit">Save</button>
