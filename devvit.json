@@ -2,7 +2,7 @@
   "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
   "name": "ai-mis",
   "post": {
-    "dir": "public",
+    "dir": "dist/client",
     "entrypoints": {
       "default": {
         "entry": "index.html",
@@ -42,6 +42,13 @@
         "forUserType": "moderator",
         "location": "subreddit",
         "endpoint": "/internal/menu/open-dashboard"
+      },
+      {
+        "label": "AMIS: Repair Dashboard Post",
+        "description": "Create and cache a fresh AMIS dashboard post",
+        "forUserType": "moderator",
+        "location": "subreddit",
+        "endpoint": "/internal/menu/repair-dashboard"
       },
       {
         "label": "AMIS: Analyze Queue",
@@ -92,7 +99,7 @@
     }
   },
   "scripts": {
-    "dev": "npm run build:server",
-    "build": "npm run build:server"
+    "dev": "vite build --watch",
+    "build": "vite build"
   }
 }

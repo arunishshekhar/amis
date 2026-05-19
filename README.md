@@ -89,7 +89,7 @@ npm test               # run full test suite
 npm run test:watch     # watch mode
 ```
 
-> **Note:** The dashboard is a Devvit Web view in `public/index.html`; server behavior and pure logic are covered by Jest. End-to-end web view behavior is verified with `devvit playtest`.
+> **Note:** The dashboard is a Devvit Web view in `src/client/index.html`; server behavior and pure logic are covered by Jest. End-to-end web view behavior is verified with `devvit playtest`.
 
 ---
 

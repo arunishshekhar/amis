@@ -36,6 +36,31 @@ function publicAIConfig(config: AIConfig | null): Record<string, string | boolea
   };
 }
 
+async function createDashboardPost(subredditName: string) {
+  return await (reddit as any).submitCustomPost({
+    subredditName,
+    title: 'AMIS - AI Moderation Intelligence Dashboard',
+    entry: 'default',
+  });
+}
+
+async function cacheDashboardPostId(postId: string): Promise<void> {
+  try {
+    await makeKvStore().put(KEYS.dashboardPostId, postId);
+  } catch (storageErr) {
+    console.warn('/internal/menu/open-dashboard: dashboard post id was not cached:', storageErr);
+  }
+}
+
+function normalizeCachedPostId(postId: string): string {
+  try {
+    const parsed = JSON.parse(postId);
+    return typeof parsed === 'string' ? parsed : postId;
+  } catch {
+    return postId;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
@@ -211,6 +236,10 @@ router.post('/internal/triggers/post-submit', async (req, res) => {
       res.json({ ok: true });
       return;
     }
+    if (post.title === 'AMIS - AI Moderation Intelligence Dashboard') {
+      res.json({ ok: true });
+      return;
+    }
     const kv = makeKvStore();
     const provider = await createAIProvider(settings as any, kv as any);
     const autoActEnabled = (await settings.get<boolean>('AUTO_ACT_ENABLED')) ?? false;
@@ -245,27 +274,57 @@ router.post('/internal/triggers/app-install', async (_req, res) => {
 router.post('/internal/menu/open-dashboard', async (_req, res) => {
   try {
     const subredditName = context.subredditName ?? '';
+    console.log(`/internal/menu/open-dashboard: requested for r/${subredditName || 'unknown'}`);
     if (!subredditName) {
       res.json({ showToast: 'AMIS: subreddit name unavailable' } satisfies UiResponse);
       return;
     }
-    const post = await (reddit as any).submitCustomPost({
-      title: 'AMIS - AI Moderation Intelligence Dashboard',
-      subredditName,
-      entry: 'default',
-      textFallback: {
-        text: 'Open this post in a Reddit client that supports Devvit Web to use the AMIS dashboard.',
-      },
-    });
+
+    const kv = makeKvStore();
     try {
-      await makeKvStore().put(KEYS.dashboardPostId, post.id);
-    } catch (storageErr) {
-      console.warn('/internal/menu/open-dashboard: dashboard post id was not cached:', storageErr);
+      const cachedPostId = await kv.get(KEYS.dashboardPostId);
+      if (cachedPostId) {
+        const normalizedPostId = normalizeCachedPostId(cachedPostId);
+        console.log(`/internal/menu/open-dashboard: using cached post ${normalizedPostId}`);
+        const cachedPost = await (reddit as any).getPostById(normalizedPostId);
+        res.json({ navigateTo: `https://www.reddit.com${cachedPost.permalink}` } satisfies UiResponse);
+        return;
+      }
+    } catch (lookupErr) {
+      console.warn('/internal/menu/open-dashboard: cached dashboard post unavailable; creating a new one:', lookupErr);
+      try {
+        await kv.delete(KEYS.dashboardPostId);
+      } catch {
+        // Best-effort cache cleanup only.
+      }
     }
+
+    const post = await createDashboardPost(subredditName);
+    console.log(`/internal/menu/open-dashboard: created dashboard post ${post.id}`);
+    await cacheDashboardPostId(post.id);
     res.json({ navigateTo: `https://www.reddit.com${post.permalink}` } satisfies UiResponse);
   } catch (err) {
     console.error('/internal/menu/open-dashboard error:', err);
     res.json({ showToast: 'Failed to open AMIS dashboard' } satisfies UiResponse);
+  }
+});
+
+router.post('/internal/menu/repair-dashboard', async (_req, res) => {
+  try {
+    const subredditName = context.subredditName ?? '';
+    console.log(`/internal/menu/repair-dashboard: requested for r/${subredditName || 'unknown'}`);
+    if (!subredditName) {
+      res.json({ showToast: 'AMIS: subreddit name unavailable' } satisfies UiResponse);
+      return;
+    }
+
+    const post = await createDashboardPost(subredditName);
+    console.log(`/internal/menu/repair-dashboard: created dashboard post ${post.id}`);
+    await cacheDashboardPostId(post.id);
+    res.json({ navigateTo: `https://www.reddit.com${post.permalink}` } satisfies UiResponse);
+  } catch (err) {
+    console.error('/internal/menu/repair-dashboard error:', err);
+    res.json({ showToast: 'Failed to repair AMIS dashboard post' } satisfies UiResponse);
   }
 });
 

@@ -85,7 +85,7 @@ Dashboard (Custom Post — polls KV every 15s)
 | `devvit.json` | Devvit Web app configuration: web view, server, triggers, menu items, scheduler |
 | `src/main.ts` | App settings declarations |
 | `src/server/index.ts` | Express endpoints for dashboard API, menu actions, triggers, and scheduler jobs |
-| `public/index.html` | Devvit Web dashboard client |
+| `src/client/index.html` | Devvit Web dashboard client |
 | `src/jobs/queue-processor.ts` | Batch queue analysis (embed → cosine → LLM → save recommendation) |
 | `src/policy/llm-classifier.ts` | LLM classification with structured JSON output; handles structural AND factual rules |
 | `src/policy/rule-ingestor.ts` | Ingests subreddit rules (title + description → PolicyObject) |
@@ -170,7 +170,7 @@ Dashboard (Custom Post — polls KV every 15s)
 
 ### Adding a new dashboard view
 
-1. Add the tab and renderer in `public/index.html`
+1. Add the tab and renderer in `src/client/index.html`
 2. Expose any required data through `/api/dashboard` or a new `/api/...` endpoint in `src/server/index.ts`
 3. Keep server-only capabilities in the server; the web view should call them with `fetch()`
 4. Keep the view within the configured post height and avoid layout shift
